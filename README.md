@@ -10,7 +10,7 @@ single job; data crosses stages as plain records with value equality.
 
 ```
 input: a C# class   ─┐
-input: a .razor file ┴→  PARSE  →  ASSEMBLE  →  EMIT  →  host compiles it
+input: a .razor file ┴→  PARSE  →  COMPILE  →  EMIT  →  host compiles it
 ```
 
 | Library | Role |
@@ -19,7 +19,7 @@ input: a .razor file ┴→  PARSE  →  ASSEMBLE  →  EMIT  →  host compiles
 | `Tempest.Parsing` | The frontend contract: `IComponentParser<TSource>` — one source in, its entries out. |
 | `Tempest.RazorParser` | Parse frontend for `.razor` files: text parser for `@code` blocks (the Razor compiler's output is invisible to other generators). |
 | `Tempest.CSharpParser` | Parse frontend for ordinary C# classes, over Roslyn symbols. |
-| `Tempest.Assembler` | The boundary crossing: dedupes, groups by component, runs the shape rules, and folds entries into `ComponentModel`s + `DiagnosticModel`s. Nothing invalid reaches the internal model by construction. |
+| `Tempest.Compiler` | The boundary crossing: dedupes, groups by component, runs the shape rules, and folds entries into `ComponentModel`s + `DiagnosticModel`s. Nothing invalid reaches the internal model by construction. |
 | `Tempest.Emit` | `ComponentModel` → generated C# source text. One emitter, framework-neutral: emitted code references only `Tempest.Core` plus a small host-base surface. |
 | `Tempest.Generators` | Thin Roslyn incremental shell: wires the pipeline into the compiler, maps model diagnostics onto Roslyn diagnostics. |
 | `Tempest.Core` | Runtime, platform-neutral: the attributes, `CommandState`/`ReactiveState` families, `IEventBus`, `ITempestComponent`. |
@@ -28,4 +28,4 @@ input: a .razor file ┴→  PARSE  →  ASSEMBLE  →  EMIT  →  host compiles
 Conventions: engine classes are instance `sealed class`es with one public verb method
 returning a domain record; boundary types live with their stage; diagnostics are data
 (not an injected sink) because Roslyn incremental caching needs value-equatable outputs;
-hard rules live in exactly one place — the assembler.
+hard rules live in exactly one place — the compiler stage.

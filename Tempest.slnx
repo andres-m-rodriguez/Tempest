@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Tempest.Assembler/Tempest.Assembler.csproj" />
     <Project Path="src/Tempest.Blazor/Tempest.Blazor.csproj" />
+    <Project Path="src/Tempest.Compiler/Tempest.Compiler.csproj" />
     <Project Path="src/Tempest.Core/Tempest.Core.csproj" />
     <Project Path="src/Tempest.CSharpParser/Tempest.CSharpParser.csproj" />
     <Project Path="src/Tempest.Emit/Tempest.Emit.csproj" />
