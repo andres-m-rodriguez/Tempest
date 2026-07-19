@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/demo/" />
+  <Folder Name="/demo/Tempest.Demo/">
+    <Project Path="demo/Tempest.Demo/Tempest.Demo.Client/Tempest.Demo.Client.csproj" />
+    <Project Path="demo/Tempest.Demo/Tempest.Demo/Tempest.Demo.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Tempest.Sample/Tempest.Sample.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Tempest.Blazor/Tempest.Blazor.csproj" />
+    <Project Path="src/Tempest.Core/Tempest.Core.csproj" />
+    <Project Path="src/Tempest.Generators/Tempest.Generators.csproj" />
+    <Project Path="src/Tempest.Model/Tempest.Model.csproj" />
+    <Project Path="src/Tempest.Parsing/Tempest.Parsing.csproj" />
+    <Project Path="src/Tempest.RazorParser/Tempest.RazorParser.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tempest.RazorParser.Tests/Tempest.RazorParser.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,14 @@
+@* No reference to CartComponent's instance needed — just its nested records. *@
+@inject IEventBus Bus
+
+<button @onclick="() => Bus.Publish<CartComponent.ClearCart>()">
+    Empty cart
+</button>
+
+@code {
+    private void Remove(string sku)
+        => Bus.Publish(new CartComponent.RemoveItem(sku));
+
+    private Task Coupon(string code)
+        => Bus.PublishAsync(new CartComponent.ApplyCoupon(code)); // awaits handlers
+}

@@ -1,0 +1,156 @@
+@page "/todos"
+@rendermode InteractiveWebAssembly
+@inherits StatefulComponent
+@inject TodoApi Api
+
+<PageTitle>Todos — Tempest demo</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+    <h1 class="h3 mb-0">Todos</h1>
+    @if (LoadTodosState.HasResult)
+    {
+        <span class="badge rounded-pill text-bg-secondary fs-6">@Page.OpenCount open</span>
+    }
+</div>
+
+<div class="input-group input-group-lg mb-2">
+    <input class="form-control" placeholder="What needs doing?" @bind="NewTitleState.Value" @bind:event="oninput" />
+    <select class="form-select flex-grow-0 w-auto" title="Priority" @bind="_newPriority">
+        <option value="@TodoPriority.Low">Low</option>
+        <option value="@TodoPriority.Normal">Normal</option>
+        <option value="@TodoPriority.High">High</option>
+    </select>
+    <button class="btn btn-primary px-4" disabled="@(!CanAdd)" @onclick="AddTodoState.TryExecute">
+        @if (AddTodoState.IsLoading)
+        {
+            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+        }
+        Add
+    </button>
+</div>
+@if (_addProblem is { } problem)
+{
+    <div class="form-text text-danger mb-3">@problem</div>
+}
+else
+{
+    <div class="mb-3"></div>
+}
+
+<input class="form-control mb-4" type="search" placeholder="Search todos…" @bind="SearchState.Value"
+       @bind:event="oninput" />
+
+@if (LoadTodosState.IsLoading && !LoadTodosState.HasResult)
+{
+    <div class="py-5 text-center text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        Loading…
+    </div>
+}
+else if (LoadTodosState.Error is { } err)
+{
+    <div class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
+        <span>@err.Message</span>
+        <button class="btn btn-sm btn-outline-danger" @onclick="LoadTodosState.TryExecute">Retry</button>
+    </div>
+}
+else if (Page.Items.Count == 0)
+{
+    <div class="py-5 text-center text-muted">
+        @(_search.Trim().Length > 0 ? $"No todos match \"{_search.Trim()}\"." : "Nothing to do — enjoy the calm.")
+    </div>
+}
+else
+{
+    @* Result stays visible while a newer search is loading — just dimmed. *@
+    <ul class="list-group list-group-flush @(LoadTodosState.IsLoading ? "opacity-50" : "")">
+        @foreach (var todo in Page.Items)
+        {
+            <li class="list-group-item d-flex align-items-center gap-3 py-3 border-start border-4 @PriorityBorder(todo)">
+                <input class="form-check-input mt-0 flex-shrink-0" type="checkbox" checked="@todo.Done"
+                       @onchange="() => Toggle(todo)" />
+                <div class="flex-grow-1">
+                    <div class="@(todo.Done ? "text-decoration-line-through text-muted" : "")">
+                        @todo.Title
+                        @if (!todo.Done && todo.Priority == TodoPriority.High)
+                        {
+                            <span class="badge text-bg-danger ms-2">high</span>
+                        }
+                        else if (!todo.Done && todo.Priority == TodoPriority.Low)
+                        {
+                            <span class="badge text-bg-secondary ms-2">low</span>
+                        }
+                    </div>
+                    <small class="text-muted">added @Ago(todo.CreatedAt)</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger border-0" title="Remove" @onclick="() => Remove(todo)">
+                    ✕
+                </button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private TodoPage Page => LoadTodosState.Result ?? new([], 0);
+    [Reactive]
+    private string _newTitle = "";
+    private void OnNewTitleChanged(string value) => _addProblem = null;
+    [Reactive]
+    private string _search = "";
+    private Task OnSearchChanged(string value) => LoadTodosState.TryExecute();
+    private TodoPriority _newPriority = TodoPriority.Normal;
+    private string? _addProblem;
+    private bool CanAdd => !AddTodoState.IsLoading && _newTitle.Trim().Length > 0;
+    [Command]
+    private Task<TodoPage> LoadTodos(CancellationToken ct)
+        => Api.SearchAsync(_search, ct);
+
+    [Command]
+    private async Task AddTodo(CancellationToken ct)
+    {
+        var (created, problem) = await Api.CreateAsync(_newTitle.Trim(), _newPriority, ct);
+        if (created is null)
+        {
+            _addProblem = problem;
+            return;
+        }
+
+        NewTitleState.Reset();
+        _newPriority = TodoPriority.Normal;
+        await LoadTodosState.TryExecute();
+    }
+
+    private async Task Toggle(TodoItem todo)
+    {
+        await Api.SetDoneAsync(todo.Id, !todo.Done);
+        await LoadTodosState.TryExecute();
+    }
+
+    private async Task Remove(TodoItem todo)
+    {
+        await Api.DeleteAsync(todo.Id);
+        await LoadTodosState.TryExecute();
+    }
+
+    private static string PriorityBorder(TodoItem todo) => todo.Done
+        ? "border-secondary-subtle"
+        : todo.Priority switch
+        {
+            TodoPriority.High => "border-danger",
+            TodoPriority.Low => "border-secondary",
+            _ => "border-primary",
+        };
+
+    private static string Ago(DateTime createdAt)
+    {
+        var span = DateTime.Now - createdAt;
+        return span.TotalMinutes < 1 ? "just now"
+            : span.TotalHours < 1 ? $"{(int)span.TotalMinutes} min ago"
+            : span.TotalDays < 1 ? $"{(int)span.TotalHours} h ago"
+            : $"{(int)span.TotalDays} d ago";
+    }
+
+    protected override Task OnInitializedAsync()
+        => LoadTodosState.TryExecute();
+}
