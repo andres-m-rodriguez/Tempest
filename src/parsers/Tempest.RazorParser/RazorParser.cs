@@ -297,7 +297,7 @@ public sealed class RazorParser : IComponentParser<RazorSource>
 
         var dir = targetPath.Length == 0 ? null : Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(dir))
-            segments.AddRange(dir
+            segments.AddRange(dir!   // netstandard2.0's IsNullOrEmpty lacks [NotNullWhen]
                 .Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(SanitizeIdentifier));
 
@@ -376,3 +376,4 @@ public sealed class RazorParser : IComponentParser<RazorSource>
         return char.ToUpperInvariant(trimmed[0]) + trimmed.Substring(1);
     }
 }
+

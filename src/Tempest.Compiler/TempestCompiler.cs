@@ -121,8 +121,10 @@ public sealed class TempestCompiler
                     continue;
                 }
 
-                if (!wiredHooks.TryAdd(target.FieldName, h))
+                if (wiredHooks.ContainsKey(target.FieldName))
                     diagnostics.Add(HookDuplicate(h.MethodName, target.FieldName, h.Span));
+                else
+                    wiredHooks.Add(target.FieldName, h);
             }
 
             if (!componentOk || (validMethods.Count == 0 && validReactives.Count == 0))
@@ -254,3 +256,4 @@ public sealed class TempestCompiler
         Severity: Severity.Warning,
         Span: span);
 }
+
