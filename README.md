@@ -17,7 +17,7 @@ input: a .razor file ┴→  PARSE  →  COMPILE  →  EMIT  →  host compiles 
 |---|---|
 | `Tempest.Model` | All pipeline data, zero dependencies. Two worlds with a clear boundary: `Tempest.Model.Entry` — members exactly as frontends read them (as written, possibly invalid, with spans); root namespace — the validated internal representation the tool works with. |
 | `Tempest.Parsing` | The frontend contract: `IComponentParser<TSource>` — one source in, its entries out. |
-| `Tempest.RazorParser` | Parse frontend for `.razor` files: text parser for `@code` blocks (the Razor compiler's output is invisible to other generators). |
+| `Tempest.RazorParser` | Parse frontend for `.razor` files, built on the official Razor engine (`Microsoft.AspNetCore.Razor.Language`): `@code` blocks, directives, and spans come from the engine's intermediate nodes; Roslyn parses the C# inside. |
 | `Tempest.CSharpParser` | Parse frontend for ordinary C# classes, over Roslyn symbols. |
 | `Tempest.Compiler` | The boundary crossing: dedupes, groups by component, runs the shape rules, and folds entries into `ComponentModel`s + `DiagnosticModel`s. Nothing invalid reaches the internal model by construction. |
 | `Tempest.Emit` | `ComponentModel` → generated C# source text. One emitter, framework-neutral: emitted code references only `Tempest.Core` plus a small host-base surface. |
@@ -29,3 +29,4 @@ Conventions: engine classes are instance `sealed class`es with one public verb m
 returning a domain record; boundary types live with their stage; diagnostics are data
 (not an injected sink) because Roslyn incremental caching needs value-equatable outputs;
 hard rules live in exactly one place — the compiler stage.
+
