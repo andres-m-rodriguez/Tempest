@@ -3,11 +3,13 @@
     <Project Path="src/Tempest.Blazor/Tempest.Blazor.csproj" />
     <Project Path="src/Tempest.Compiler/Tempest.Compiler.csproj" />
     <Project Path="src/Tempest.Core/Tempest.Core.csproj" />
-    <Project Path="src/Tempest.CSharpParser/Tempest.CSharpParser.csproj" />
     <Project Path="src/Tempest.Emit/Tempest.Emit.csproj" />
     <Project Path="src/Tempest.Generators/Tempest.Generators.csproj" />
     <Project Path="src/Tempest.Model/Tempest.Model.csproj" />
     <Project Path="src/Tempest.Parsing/Tempest.Parsing.csproj" />
-    <Project Path="src/Tempest.RazorParser/Tempest.RazorParser.csproj" />
+  </Folder>
+  <Folder Name="/src/parsers/">
+    <Project Path="src/parsers/Tempest.CSharpParser/Tempest.CSharpParser.csproj" />
+    <Project Path="src/parsers/Tempest.RazorParser/Tempest.RazorParser.csproj" />
   </Folder>
 </Solution>
