@@ -1,7 +1,7 @@
 # Tempest
 
-Component-owned state for Blazor. Three attributes and a bus: `[Command]`, `[Reactive]`,
-`[Event]` — a source generator emits one state twin per member.
+Component-owned state for Blazor. Four attributes and a bus: `[Command]`, `[Reactive]`,
+`[Event]`, `[OnChanged]` — a source generator emits one state twin per member.
 
 ## Architecture
 
@@ -29,4 +29,5 @@ Conventions: engine classes are instance `sealed class`es with one public verb m
 returning a domain record; boundary types live with their stage; diagnostics are data
 (not an injected sink) because Roslyn incremental caching needs value-equatable outputs;
 hard rules live in exactly one place — the compiler stage.
+
 

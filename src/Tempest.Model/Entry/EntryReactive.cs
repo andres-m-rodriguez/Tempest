@@ -1,19 +1,26 @@
 namespace Tempest.Model.Entry;
 
-/// <summary>A reactive change-hook candidate exactly as a frontend read it — kept even
-/// when not partial, so the assembler can warn (TEM008) before dropping it.</summary>
+/// <summary>An [OnChanged] hook method exactly as a frontend read it — entry-point data,
+/// before resolution. Which [Reactive] field it watches is the compiler stage's decision:
+/// the explicit attribute argument when present, else the On{Field}Changed name
+/// convention. Unresolvable or malformed hooks become diagnostics there.</summary>
 public sealed record EntryHook(
-    /// <summary>As written, e.g. "private" — may be empty.</summary>
-    string Accessibility,
-    bool ReturnsTask,
-    string ParamName,
-    bool IsPartial,
+    string Namespace,
+    string ComponentName,
     string MethodName,
+    /// <summary>The attribute's argument when written as [OnChanged("...")] or
+    /// [OnChanged(nameof(...))]: a field name or its PascalCase twin. Null for bare
+    /// [OnChanged], which resolves by the On{Field}Changed name convention.</summary>
+    string? ExplicitTarget,
+    bool ReturnsTask,
+    /// <summary>Total parameter count — the shape rule demands exactly one (the new value).</summary>
+    int ParameterCount,
     SourceSpan Span);
 
 /// <summary>A [Reactive] field exactly as a frontend read it — entry-point data, before
-/// any shape validation. Carries everything the shape rules judge; the assembler maps
-/// survivors into the internal <see cref="ReactiveModel"/>.</summary>
+/// any shape validation. Carries everything the shape rules judge; the compiler maps
+/// survivors into the internal <see cref="ReactiveModel"/>, wiring any [OnChanged] hook
+/// during resolution.</summary>
 public sealed record EntryReactive(
     string Namespace,
     string ComponentName,
@@ -21,7 +28,6 @@ public sealed record EntryReactive(
     /// <summary>The PascalCase twin the generated {Name}State property is named after.</summary>
     string PropertyName,
     string TypeText,
-    EntryHook? Hook,
     /// <summary>True when the component inherits a Tempest host base (Blazor's
     /// StatefulComponent/StatefulLayoutComponent). Razor parsing can only infer this.</summary>
     bool InheritsHostBase,

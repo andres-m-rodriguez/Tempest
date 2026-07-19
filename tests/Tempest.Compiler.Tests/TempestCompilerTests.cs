@@ -18,15 +18,22 @@ public class TempestCompilerTests
             nestedRecord, inherits, "private", fromRazor, fileUsings, SourceSpan.None);
 
     private static EntryReactive Reactive(
-        string field = "_x", bool valid = true, bool inherits = true, EntryHook? hook = null,
+        string field = "_x", string property = "X", bool valid = true, bool inherits = true,
         string ns = "App", string component = "C", bool fromRazor = false, string fileUsings = "")
-        => new(ns, component, field, "X", "int", hook, inherits, valid, "private",
+        => new(ns, component, field, property, "int", inherits, valid, "private",
             fromRazor, fileUsings, SourceSpan.None);
 
-    private static SourceEntries Entries(EntryMethod[]? methods = null, EntryReactive[]? reactives = null)
+    private static EntryHook Hook(
+        string method = "OnXChanged", string? target = null, bool returnsTask = false,
+        int parameterCount = 1, string ns = "App", string component = "C")
+        => new(ns, component, method, target, returnsTask, parameterCount, SourceSpan.None);
+
+    private static SourceEntries Entries(
+        EntryMethod[]? methods = null, EntryReactive[]? reactives = null, EntryHook[]? hooks = null)
         => new(
             new EquatableArray<EntryMethod>(methods ?? []),
-            new EquatableArray<EntryReactive>(reactives ?? []));
+            new EquatableArray<EntryReactive>(reactives ?? []),
+            new EquatableArray<EntryHook>(hooks ?? []));
 
     [Fact]
     public void ValidMembersCompileIntoOneComponent()
@@ -85,35 +92,104 @@ public class TempestCompilerTests
     [Fact]
     public void InvalidReactiveFieldIsExcludedWithDiagnostic()
     {
-        var result = Compiler.Compile([Entries(reactives: [Reactive(valid: false), Reactive(field: "_ok")])]);
+        var result = Compiler.Compile([Entries(reactives: [Reactive(valid: false), Reactive(field: "_ok", property: "Ok")])]);
 
         Assert.Equal("TEM007", Assert.Single(result.Diagnostics).Id);
         Assert.Equal("_ok", Assert.Single(Assert.Single(result.Components).Reactives).FieldName);
     }
 
     [Fact]
-    public void NonPartialHookIsDroppedWithWarning()
+    public void ConventionHookWiresToPascalTwin()
     {
-        var hook = new EntryHook("private", ReturnsTask: false, "v", IsPartial: false, "OnXChanged", SourceSpan.None);
-        var result = Compiler.Compile([Entries(reactives: [Reactive(hook: hook)])]);
+        var result = Compiler.Compile([Entries(
+            reactives: [Reactive()],
+            hooks: [Hook("OnXChanged", returnsTask: true)])]);
+
+        Assert.Empty(result.Diagnostics);
+        var hook = Assert.Single(Assert.Single(result.Components).Reactives).Hook;
+        Assert.NotNull(hook);
+        Assert.Equal("OnXChanged", hook!.MethodName);
+        Assert.True(hook.ReturnsTask);
+    }
+
+    [Fact]
+    public void ExplicitTargetMatchesFieldName()
+    {
+        var result = Compiler.Compile([Entries(
+            reactives: [Reactive()],
+            hooks: [Hook("Whatever", target: "_x")])]);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal("Whatever", Assert.Single(Assert.Single(result.Components).Reactives).Hook!.MethodName);
+    }
+
+    [Fact]
+    public void ExplicitTargetMatchesPascalTwin()
+    {
+        var result = Compiler.Compile([Entries(
+            reactives: [Reactive()],
+            hooks: [Hook("Whatever", target: "X")])]);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(Assert.Single(Assert.Single(result.Components).Reactives).Hook);
+    }
+
+    [Fact]
+    public void UnmatchedHookIsAnError()
+    {
+        var result = Compiler.Compile([Entries(
+            reactives: [Reactive()],
+            hooks: [Hook("OnNopeChanged")])]);
 
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal("TEM008", diagnostic.Id);
-        Assert.Equal(Severity.Warning, diagnostic.Severity);
+        Assert.Equal(Severity.Error, diagnostic.Severity);
         Assert.Null(Assert.Single(Assert.Single(result.Components).Reactives).Hook);
     }
 
     [Fact]
-    public void PartialHookIsCarriedIntoTheModel()
+    public void WrongShapeHookIsAnError()
     {
-        var hook = new EntryHook("private", ReturnsTask: true, "v", IsPartial: true, "OnXChanged", SourceSpan.None);
-        var result = Compiler.Compile([Entries(reactives: [Reactive(hook: hook)])]);
+        var result = Compiler.Compile([Entries(
+            reactives: [Reactive()],
+            hooks: [Hook("OnXChanged", parameterCount: 2)])]);
+
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("TEM009", diagnostic.Id);
+        Assert.Null(Assert.Single(Assert.Single(result.Components).Reactives).Hook);
+    }
+
+    [Fact]
+    public void DuplicateHooksKeepFirstAndWarn()
+    {
+        var result = Compiler.Compile([Entries(
+            reactives: [Reactive()],
+            hooks: [Hook("OnXChanged"), Hook("AlsoWatches", target: "_x")])]);
+
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("TEM010", diagnostic.Id);
+        Assert.Equal(Severity.Warning, diagnostic.Severity);
+        Assert.Equal("OnXChanged", Assert.Single(Assert.Single(result.Components).Reactives).Hook!.MethodName);
+    }
+
+    [Fact]
+    public void HookOnlyComponentStillReportsUnmatched()
+    {
+        var result = Compiler.Compile([Entries(hooks: [Hook("OnXChanged")])]);
+
+        Assert.Empty(result.Components);
+        Assert.Equal("TEM008", Assert.Single(result.Diagnostics).Id);
+    }
+
+    [Fact]
+    public void HookAndFieldFromDifferentSourcesStillWire()
+    {
+        var result = Compiler.Compile([
+            Entries(reactives: [Reactive()]),
+            Entries(hooks: [Hook("OnXChanged")])]);
 
         Assert.Empty(result.Diagnostics);
-        var model = Assert.Single(Assert.Single(result.Components).Reactives).Hook;
-        Assert.NotNull(model);
-        Assert.Equal("OnXChanged", model!.MethodName);
-        Assert.True(model.ReturnsTask);
+        Assert.NotNull(Assert.Single(Assert.Single(result.Components).Reactives).Hook);
     }
 
     [Fact]
@@ -158,6 +234,9 @@ public class TempestCompilerTests
             @code {
                 [Reactive] private string _query = "";
 
+                [OnChanged]
+                private void OnQueryChanged(string v) { _ = v; }
+
                 [Command]
                 private Task Save() => Task.CompletedTask;
             }
@@ -171,7 +250,9 @@ public class TempestCompilerTests
         Assert.Equal("Cart", component.Name);
         Assert.Equal("Demo.Pages", component.Namespace);
         Assert.Equal("Save", Assert.Single(component.Methods).MethodName);
-        Assert.Equal("Query", Assert.Single(component.Reactives).PropertyName);
+        var reactive = Assert.Single(component.Reactives);
+        Assert.Equal("Query", reactive.PropertyName);
+        Assert.Equal("OnQueryChanged", reactive.Hook!.MethodName);
     }
 
     [Fact]
@@ -186,7 +267,7 @@ public class TempestCompilerTests
     [Fact]
     public void CompilingTwiceIsValueEqual()
     {
-        var input = new[] { Entries(methods: [Method()], reactives: [Reactive()]) };
+        var input = new[] { Entries(methods: [Method()], reactives: [Reactive()], hooks: [Hook("OnXChanged")]) };
 
         Assert.Equal(Compiler.Compile(input), Compiler.Compile(input));
     }

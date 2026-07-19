@@ -53,7 +53,8 @@ public sealed class RazorParser : IComponentParser<RazorSource>
     public SourceEntries Parse(RazorSource source)
     {
         var text = source.Text;
-        if (!text.Contains("[Command") && !text.Contains("[Event") && !text.Contains("[Reactive"))
+        if (!text.Contains("[Command") && !text.Contains("[Event") &&
+            !text.Contains("[Reactive") && !text.Contains("[OnChanged"))
             return SourceEntries.Empty;
 
         var componentName = SanitizeIdentifier(Path.GetFileNameWithoutExtension(source.FilePath));
@@ -87,7 +88,7 @@ public sealed class RazorParser : IComponentParser<RazorSource>
         var sourceText = SourceText.From(text);
         var methods = new List<EntryMethod>();
         var reactiveFields = new List<(string FieldName, string TypeText, bool Valid, string Accessibility, SourceSpan Span)>();
-        var hookCandidates = new Dictionary<string, EntryHook>();
+        var hooks = new List<EntryHook>();
 
         foreach (var (blockStart, blockText) in ExtractCodeBlocks(text, classNode))
         {
@@ -122,37 +123,31 @@ public sealed class RazorParser : IComponentParser<RazorSource>
             foreach (var method in cls.Members.OfType<MethodDeclarationSyntax>())
             {
                 var span = MapSpan(source.FilePath, sourceText, method.Identifier.Span, blockStart);
-
-                // Hook candidates: On{X}(one parameter) with a body.
                 var methodName = method.Identifier.ValueText;
-                if (methodName.StartsWith("On", StringComparison.Ordinal) &&
-                    method.ParameterList.Parameters.Count == 1 &&
-                    (method.Body is not null || method.ExpressionBody is not null) &&
-                    !hookCandidates.ContainsKey(methodName))
-                {
-                    var accessibility = string.Join(" ", method.Modifiers
-                        .Where(m => m.IsKind(SyntaxKind.PrivateKeyword) ||
-                                    m.IsKind(SyntaxKind.ProtectedKeyword) ||
-                                    m.IsKind(SyntaxKind.InternalKeyword) ||
-                                    m.IsKind(SyntaxKind.PublicKeyword))
-                        .Select(m => m.Text));
-
-                    hookCandidates[methodName] = new EntryHook(
-                        Accessibility: accessibility,
-                        ReturnsTask: method.ReturnType.ToString() != "void",
-                        ParamName: method.ParameterList.Parameters[0].Identifier.ValueText,
-                        IsPartial: method.Modifiers.Any(SyntaxKind.PartialKeyword),
-                        MethodName: methodName,
-                        Span: span);
-                }
 
                 var isCommand = false;
                 var isEvent = false;
+                AttributeSyntax? onChanged = null;
                 foreach (var attr in method.AttributeLists.SelectMany(l => l.Attributes))
                 {
                     var name = SimpleAttributeName(attr.Name.ToString());
                     if (name == "Command") isCommand = true;
                     if (name == "Event") isEvent = true;
+                    if (name == "OnChanged") onChanged ??= attr;
+                }
+
+                // Hooks are declared by attribute; which field they watch is resolved by
+                // the compiler stage, so only the raw facts are recorded here.
+                if (onChanged is not null)
+                {
+                    hooks.Add(new EntryHook(
+                        Namespace: ns,
+                        ComponentName: componentName,
+                        MethodName: methodName,
+                        ExplicitTarget: ExplicitHookTarget(onChanged),
+                        ReturnsTask: method.ReturnType.ToString() != "void",
+                        ParameterCount: method.ParameterList.Parameters.Count,
+                        Span: span));
                 }
 
                 if (!isCommand && !isEvent)
@@ -202,14 +197,12 @@ public sealed class RazorParser : IComponentParser<RazorSource>
         foreach (var (fieldName, typeText, validModifiers, accessibility, span) in reactiveFields)
         {
             var propertyName = ToPascal(fieldName);
-            hookCandidates.TryGetValue("On" + propertyName + "Changed", out var hook);
             reactives.Add(new EntryReactive(
                 Namespace: ns,
                 ComponentName: componentName,
                 FieldName: fieldName,
                 PropertyName: propertyName,
                 TypeText: typeText,
-                Hook: hook,
                 InheritsHostBase: inherits,
                 IsValidField: validModifiers && propertyName != fieldName && propertyName.Length > 0,
                 Accessibility: accessibility,
@@ -220,7 +213,30 @@ public sealed class RazorParser : IComponentParser<RazorSource>
 
         return new SourceEntries(
             new EquatableArray<EntryMethod>(methods.ToArray()),
-            new EquatableArray<EntryReactive>(reactives.ToArray()));
+            new EquatableArray<EntryReactive>(reactives.ToArray()),
+            new EquatableArray<EntryHook>(hooks.ToArray()));
+    }
+
+    /// <summary>The [OnChanged] argument as a field/property name: a string literal's
+    /// value, or the identifier inside nameof(...) (last segment when qualified). Null
+    /// when the attribute is bare — the name convention resolves the target instead.</summary>
+    private static string? ExplicitHookTarget(AttributeSyntax attribute)
+    {
+        var expression = attribute.ArgumentList?.Arguments.FirstOrDefault()?.Expression;
+        switch (expression)
+        {
+            case LiteralExpressionSyntax { Token.Value: string literal }:
+                return literal;
+            case InvocationExpressionSyntax { Expression: IdentifierNameSyntax { Identifier.ValueText: "nameof" } } inv
+                when inv.ArgumentList.Arguments.Count == 1:
+            {
+                var target = inv.ArgumentList.Arguments[0].Expression.ToString();
+                var dot = target.LastIndexOf('.');
+                return dot >= 0 ? target.Substring(dot + 1) : target;
+            }
+            default:
+                return null;
+        }
     }
 
     /// <summary>Each @code block's contents as (offset in file, text). The Razor engine

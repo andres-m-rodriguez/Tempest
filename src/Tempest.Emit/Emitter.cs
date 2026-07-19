@@ -6,8 +6,8 @@ namespace Tempest.Emit;
 /// <summary>
 /// <see cref="ComponentModel"/> -> generated C# source text. Emits one state twin per
 /// member: a {Name}State CommandState property per [Command], a {PascalCase}State
-/// ReactiveState&lt;T&gt; property (plus optional partial On{PascalCase}Changed hook
-/// declaration) per [Reactive] field, and the bus registration override per [Event].
+/// ReactiveState&lt;T&gt; property per [Reactive] field (invoking its [OnChanged] hook
+/// when one is wired), and the bus registration override per [Event].
 /// The emitted code is framework-neutral: it references only Tempest.Core types
 /// (CommandState, ReactiveState, IEventBus) plus the small host-base surface
 /// (InvokeAsync, SubscribeEvent, DispatchEvent, RegisterTempestHandlers).
@@ -111,23 +111,14 @@ public sealed class Emitter
         var backing = $"__{char.ToLowerInvariant(r.PropertyName[0])}{r.PropertyName.Substring(1)}State";
         var stateType = $"global::Tempest.ReactiveState<{r.TypeText}>";
 
-        string hookArgument;
-        if (r.Hook is null)
+        // The [OnChanged] hook is an ordinary user method — invoked directly, adapted
+        // with CompletedTask when it returns void. No partial counterpart is generated.
+        var hookArgument = r.Hook switch
         {
-            hookArgument = "null";
-        }
-        else
-        {
-            // Defining half of the user's partial hook implementation.
-            var accessibility = r.Hook.Accessibility.Length > 0 ? r.Hook.Accessibility + " " : "";
-            var returnType = r.Hook.ReturnsTask ? TaskType : "void";
-            sb.AppendLine($"{body}{accessibility}partial {returnType} {r.Hook.MethodName}({r.TypeText} {r.Hook.ParamName});");
-            sb.AppendLine();
-
-            hookArgument = r.Hook.ReturnsTask
-                ? $"__v => {r.Hook.MethodName}(__v)"
-                : $"__v => {{ {r.Hook.MethodName}(__v); return {TaskType}.CompletedTask; }}";
-        }
+            null => "null",
+            { ReturnsTask: true } hook => $"__v => {hook.MethodName}(__v)",
+            { } hook => $"__v => {{ {hook.MethodName}(__v); return {TaskType}.CompletedTask; }}",
+        };
 
         sb.AppendLine($"{body}private {stateType}? {backing};");
         sb.AppendLine();
@@ -180,3 +171,4 @@ public sealed class Emitter
         sb.AppendLine($"{body}}}");
     }
 }
+

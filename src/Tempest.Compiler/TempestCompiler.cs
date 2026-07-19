@@ -6,7 +6,9 @@ namespace Tempest.Compiler;
 /// <summary>The boundary between the two data worlds: takes what came in (raw
 /// <see cref="SourceEntries"/> from any frontend) and produces what the tool uses
 /// internally (validated <see cref="ComponentModel"/>s), reporting every shape-rule
-/// failure as a <see cref="DiagnosticModel"/> on the way through.</summary>
+/// failure as a <see cref="DiagnosticModel"/> on the way through. Hook-to-field
+/// resolution happens here too — hooks and fields of one component may come from
+/// different sources.</summary>
 public sealed class TempestCompiler
 {
     /// <param name="sources">The entries each parsed source contributed.</param>
@@ -16,24 +18,34 @@ public sealed class TempestCompiler
         IEnumerable<SourceEntries> sources,
         IEnumerable<string>? importsUsings = null)
     {
+        var all = sources.ToList();
+
         // A .cs method with [Event, Command] is found by both symbol providers; keep one copy.
-        var methods = sources.SelectMany(s => s.Methods)
+        var methods = all.SelectMany(s => s.Methods)
             .GroupBy(m => (m.Namespace, m.ComponentName, m.MethodName, m.ParamType))
             .Select(g => g.First())
             .ToList();
 
-        var reactives = sources.SelectMany(s => s.Reactives)
+        var reactives = all.SelectMany(s => s.Reactives)
             .GroupBy(r => (r.Namespace, r.ComponentName, r.FieldName))
             .Select(g => g.First())
             .ToList();
 
+        var hooks = all.SelectMany(s => s.Hooks)
+            .GroupBy(h => (h.Namespace, h.ComponentName, h.MethodName))
+            .Select(g => g.First())
+            .ToList();
+
+        // Hook-only components still iterate so unresolvable hooks get diagnosed.
         var componentKeys = methods
             .Select(m => (m.Namespace, m.ComponentName))
             .Concat(reactives.Select(r => (r.Namespace, r.ComponentName)))
+            .Concat(hooks.Select(h => (h.Namespace, h.ComponentName)))
             .Distinct();
 
         var methodsByComponent = methods.ToLookup(m => (m.Namespace, m.ComponentName));
         var reactivesByComponent = reactives.ToLookup(r => (r.Namespace, r.ComponentName));
+        var hooksByComponent = hooks.ToLookup(h => (h.Namespace, h.ComponentName));
 
         var components = new List<ComponentModel>();
         var diagnostics = new List<DiagnosticModel>();
@@ -86,14 +98,31 @@ public sealed class TempestCompiler
                     continue;
                 }
 
-                if (r.Hook is { IsPartial: false } lateHook)
+                validReactives.Add(r);
+            }
+
+            // Hook resolution: an explicit [OnChanged("...")] target (field name or its
+            // PascalCase twin) wins; bare [OnChanged] resolves by the On{Field}Changed
+            // name convention. Resolution runs against the valid fields only — a hook on
+            // an invalid field is unmatched (the field's own diagnostic already fired).
+            var wiredHooks = new Dictionary<string, EntryHook>();
+            foreach (var h in hooksByComponent[(ns, name)])
+            {
+                if (h.ParameterCount != 1)
                 {
-                    diagnostics.Add(HookNotPartial(lateHook.MethodName, r.FieldName, lateHook.Span));
-                    validReactives.Add(r with { Hook = null });
+                    diagnostics.Add(HookShape(h.MethodName, h.Span));
                     continue;
                 }
 
-                validReactives.Add(r);
+                var target = ResolveHookTarget(h, validReactives);
+                if (target is null)
+                {
+                    diagnostics.Add(HookUnmatched(h.MethodName, h.Span));
+                    continue;
+                }
+
+                if (!wiredHooks.TryAdd(target.FieldName, h))
+                    diagnostics.Add(HookDuplicate(h.MethodName, target.FieldName, h.Span));
             }
 
             if (!componentOk || (validMethods.Count == 0 && validReactives.Count == 0))
@@ -116,13 +145,32 @@ public sealed class TempestCompiler
                 Namespace: ns,
                 Name: name,
                 Methods: new EquatableArray<MethodModel>(validMethods.Select(ToModel).ToArray()),
-                Reactives: new EquatableArray<ReactiveModel>(validReactives.Select(ToModel).ToArray()),
+                Reactives: new EquatableArray<ReactiveModel>(validReactives
+                    .Select(r => ToModel(r, wiredHooks.TryGetValue(r.FieldName, out var hook) ? hook : null))
+                    .ToArray()),
                 Usings: new EquatableArray<string>([.. usings])));
         }
 
         return new Compilation(
             new EquatableArray<ComponentModel>(components.ToArray()),
             new EquatableArray<DiagnosticModel>(diagnostics.ToArray()));
+    }
+
+    private static EntryReactive? ResolveHookTarget(EntryHook hook, List<EntryReactive> reactives)
+    {
+        if (hook.ExplicitTarget is { } target)
+            return reactives.FirstOrDefault(r => r.FieldName == target || r.PropertyName == target);
+
+        const string Head = "On";
+        const string Tail = "Changed";
+        var name = hook.MethodName;
+        if (name.Length <= Head.Length + Tail.Length ||
+            !name.StartsWith(Head, StringComparison.Ordinal) ||
+            !name.EndsWith(Tail, StringComparison.Ordinal))
+            return null;
+
+        var twin = name.Substring(Head.Length, name.Length - Head.Length - Tail.Length);
+        return reactives.FirstOrDefault(r => r.PropertyName == twin);
     }
 
     private static MethodModel ToModel(EntryMethod m) => new(
@@ -136,13 +184,11 @@ public sealed class TempestCompiler
         ParamTypeName: m.ParamTypeName,
         Accessibility: m.Accessibility);
 
-    private static ReactiveModel ToModel(EntryReactive r) => new(
+    private static ReactiveModel ToModel(EntryReactive r, EntryHook? hook) => new(
         FieldName: r.FieldName,
         PropertyName: r.PropertyName,
         TypeText: r.TypeText,
-        Hook: r.Hook is null
-            ? null
-            : new HookModel(r.Hook.Accessibility, r.Hook.ReturnsTask, r.Hook.ParamName, r.Hook.MethodName),
+        Hook: hook is null ? null : new HookModel(hook.MethodName, hook.ReturnsTask),
         Accessibility: r.Accessibility);
 
     private static readonly HashSet<string> StandardUsings =
@@ -187,10 +233,24 @@ public sealed class TempestCompiler
         Severity: Severity.Error,
         Span: span);
 
-    private static DiagnosticModel HookNotPartial(string method, string field, SourceSpan span) => new(
+    private static DiagnosticModel HookUnmatched(string method, SourceSpan span) => new(
         Id: "TEM008",
-        Title: "Reactive hook is not partial",
-        Message: $"Method '{method}' matches [Reactive] field '{field}' but is not partial; declare it 'partial' to wire it as the change hook",
+        Title: "[OnChanged] hook matches no [Reactive] field",
+        Message: $"[OnChanged] hook '{method}' matches no [Reactive] field of this component; name it On{{Field}}Changed or pass the field name to the attribute",
+        Severity: Severity.Error,
+        Span: span);
+
+    private static DiagnosticModel HookShape(string method, SourceSpan span) => new(
+        Id: "TEM009",
+        Title: "[OnChanged] hook has the wrong shape",
+        Message: $"[OnChanged] hook '{method}' must take exactly one parameter: the field's new value",
+        Severity: Severity.Error,
+        Span: span);
+
+    private static DiagnosticModel HookDuplicate(string method, string field, SourceSpan span) => new(
+        Id: "TEM010",
+        Title: "[Reactive] field has multiple change hooks",
+        Message: $"[Reactive] field '{field}' already has a change hook; '{method}' is ignored",
         Severity: Severity.Warning,
         Span: span);
 }

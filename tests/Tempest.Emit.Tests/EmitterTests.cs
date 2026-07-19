@@ -230,30 +230,23 @@ public class EmitterTests
     }
 
     [Fact]
-    public void ReactiveWithVoidHook_DeclaresPartialVoid_AndWrapsInCompletedTask()
+    public void ReactiveWithVoidHook_WrapsCallInCompletedTask_NoDeclaration()
     {
         var source = EmitValid(Component(reactives:
-            [new ReactiveModel("_name", "Name", "string", new HookModel("private", ReturnsTask: false, "value", "OnNameChanged"), "private")]));
-        Assert.Contains("private partial void OnNameChanged(string value);", source);
+            [new ReactiveModel("_name", "Name", "string", new HookModel("OnNameChanged", ReturnsTask: false), "private")]));
+        Assert.DoesNotContain("partial void OnNameChanged", source);
         Assert.Contains("__v => { OnNameChanged(__v); return global::System.Threading.Tasks.Task.CompletedTask; });", source);
     }
 
     [Fact]
-    public void ReactiveWithTaskHook_DeclaresPartialTask_AndPassesDelegate()
+    public void ReactiveWithTaskHook_PassesDelegateDirectly_NoDeclaration()
     {
         var source = EmitValid(Component(reactives:
-            [new ReactiveModel("_items", "Items", "List<string>", new HookModel("private", ReturnsTask: true, "v", "OnItemsChanged"), "private")]));
-        Assert.Contains("private partial global::System.Threading.Tasks.Task OnItemsChanged(List<string> v);", source);
+            [new ReactiveModel("_items", "Items", "List<string>", new HookModel("OnItemsChanged", ReturnsTask: true), "private")]));
+        Assert.DoesNotContain("partial global::System.Threading.Tasks.Task OnItemsChanged", source);
         Assert.Contains("__v => OnItemsChanged(__v));", source);
     }
 
-    [Fact]
-    public void ReactiveWithHookOfEmptyAccessibility_OmitsTheModifier()
-    {
-        var source = EmitValid(Component(reactives:
-            [new ReactiveModel("_x", "X", "int", new HookModel("", ReturnsTask: false, "value", "OnXChanged"), "private")]));
-        Assert.Contains("        partial void OnXChanged(int value);", source);
-    }
 
     [Fact]
     public void Reactives_AreTouchedInRegisterTempestHandlers()
@@ -348,7 +341,7 @@ public class EmitterTests
             new EquatableArray<ReactiveModel>(
             [
                 new ReactiveModel("_count", "Count", "int",
-                    new HookModel("private", ReturnsTask: true, "value", "OnCountChanged"),
+                    new HookModel("OnCountChanged", ReturnsTask: true),
                     "private"),
             ]),
             new EquatableArray<string>(["Demo.Shared"]));
@@ -376,8 +369,6 @@ public class EmitterTests
 
                     /// <summary>State for the Refresh command: IsLoading, Error, Execute, TryExecute.</summary>
                     private global::Tempest.EventCommandState<global::Demo.App.Counter.Refresh> RefreshState => __refreshState ??= new global::Tempest.EventCommandState<global::Demo.App.Counter.Refresh>(this, (__e, __ct) => OnRefresh(__e));
-
-                    private partial global::System.Threading.Tasks.Task OnCountChanged(int value);
 
                     private global::Tempest.ReactiveState<int>? __countState;
 
@@ -427,11 +418,12 @@ public class EmitterTests
             reactives:
             [
                 new ReactiveModel("_a", "A2", "int", null, "private"),
-                new ReactiveModel("_b", "B2", "string", new HookModel("private", false, "value", "OnB2Changed"), "private"),
-                new ReactiveModel("_c", "C2", "List<int>", new HookModel("protected", true, "v", "OnC2Changed"), "protected"),
+                new ReactiveModel("_b", "B2", "string", new HookModel("OnB2Changed", false), "private"),
+                new ReactiveModel("_c", "C2", "List<int>", new HookModel("OnC2Changed", true), "protected"),
             ],
             usings: ["Demo.Shared"]);
 
         EmitValid(component);
     }
 }
+

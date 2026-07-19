@@ -18,6 +18,7 @@ public class RazorParserTests
         @code {
             [Reactive] private string _query = "";
 
+            [OnChanged]
             private void OnQueryChanged(string value) { _ = value; }
 
             public sealed record ItemAdded(int Id);
@@ -87,7 +88,7 @@ public class RazorParserTests
     }
 
     [Fact]
-    public void ReactiveFieldGetsPascalTwinAndHook()
+    public void ReactiveFieldGetsPascalTwin()
     {
         var reactive = Assert.Single(ParseCart().Reactives);
 
@@ -96,11 +97,49 @@ public class RazorParserTests
         Assert.Equal("string", reactive.TypeText);
         Assert.True(reactive.IsValidField);
         Assert.Equal("private", reactive.Accessibility);
-        Assert.NotNull(reactive.Hook);
-        Assert.Equal("OnQueryChanged", reactive.Hook!.MethodName);
-        Assert.False(reactive.Hook.ReturnsTask);
-        Assert.Equal("value", reactive.Hook.ParamName);
-        Assert.False(reactive.Hook.IsPartial);
+    }
+
+    [Fact]
+    public void OnChangedMethodBecomesHookEntry()
+    {
+        var hook = Assert.Single(ParseCart().Hooks);
+
+        Assert.Equal("OnQueryChanged", hook.MethodName);
+        Assert.Null(hook.ExplicitTarget);
+        Assert.False(hook.ReturnsTask);
+        Assert.Equal(1, hook.ParameterCount);
+        Assert.Equal("Cart", hook.ComponentName);
+        Assert.Equal("Demo.Pages", hook.Namespace);
+    }
+
+    [Fact]
+    public void ExplicitOnChangedTargetsAreExtracted()
+    {
+        var text = """
+            @code {
+                [Reactive] private int _count;
+                [OnChanged("_count")] private void CountBumped(int v) { }
+                [OnChanged(nameof(_count))] private void AlsoBumped(int v) { }
+            }
+            """;
+        var result = Parser.Parse(new RazorSource("A.razor", text));
+
+        Assert.Equal(2, result.Hooks.Count);
+        Assert.All(result.Hooks, h => Assert.Equal("_count", h.ExplicitTarget));
+    }
+
+    [Fact]
+    public void UnattributedOnMethodIsNotAHook()
+    {
+        var text = """
+            @code {
+                [Reactive] private int _x;
+                private void OnXChanged(int v) { }
+            }
+            """;
+        var result = Parser.Parse(new RazorSource("A.razor", text));
+
+        Assert.Empty(result.Hooks);
     }
 
     [Fact]
@@ -193,7 +232,7 @@ public class RazorParserTests
     }
 
     [Fact]
-    public void HookInAnotherCodeBlockStillWires()
+    public void HookInAnotherCodeBlockIsCollected()
     {
         var text = """
             @code {
@@ -201,14 +240,15 @@ public class RazorParserTests
             }
             <p>markup between blocks</p>
             @code {
+                [OnChanged]
                 private async Task OnTitleChanged(string v) { await Task.Yield(); }
             }
             """;
         var result = Parser.Parse(new RazorSource("A.razor", text));
 
-        var reactive = Assert.Single(result.Reactives);
-        Assert.NotNull(reactive.Hook);
-        Assert.True(reactive.Hook!.ReturnsTask);
+        var hook = Assert.Single(result.Hooks);
+        Assert.Equal("OnTitleChanged", hook.MethodName);
+        Assert.True(hook.ReturnsTask);
     }
 
     [Fact]
