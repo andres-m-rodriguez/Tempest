@@ -1,21 +1,2 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Tempest.Blazor/Tempest.Blazor.csproj" />
-    <Project Path="src/Tempest.Compiler/Tempest.Compiler.csproj" />
-    <Project Path="src/Tempest.Core/Tempest.Core.csproj" />
-    <Project Path="src/Tempest.Emit/Tempest.Emit.csproj" />
-    <Project Path="src/Tempest.Generators/Tempest.Generators.csproj" />
-    <Project Path="src/Tempest.Model/Tempest.Model.csproj" />
-    <Project Path="src/Tempest.Parsing/Tempest.Parsing.csproj" />
-  </Folder>
-  <Folder Name="/src/parsers/">
-    <Project Path="src/parsers/Tempest.CSharpParser/Tempest.CSharpParser.csproj" />
-    <Project Path="src/parsers/Tempest.RazorParser/Tempest.RazorParser.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/Tempest.Compiler.Tests/Tempest.Compiler.Tests.csproj" />
-    <Project Path="tests/Tempest.Emit.Tests/Tempest.Emit.Tests.csproj" />
-    <Project Path="tests/Tempest.RazorParser.Tests/Tempest.RazorParser.Tests.csproj" />
-  </Folder>
 </Solution>
-
