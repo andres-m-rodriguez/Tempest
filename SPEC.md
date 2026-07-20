@@ -30,7 +30,6 @@ public sealed partial class TodoStore(ITodoApi api, IEventBus bus) : StatefulSto
     }
 
     public sealed record TodoCompleted(int Id);
-
     [Event]
     private async Task OnTodoCompleted(TodoCompleted e)
     {

@@ -1,2 +1,8 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tempest.Parsing/Tempest.Parsing.csproj" />
+  </Folder>
+  <Folder Name="/src/parsers/">
+    <Project Path="src/parsers/Tempest.RazorParser/Tempest.RazorParser.csproj" />
+  </Folder>
 </Solution>
