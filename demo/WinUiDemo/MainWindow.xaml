@@ -1,0 +1,19 @@
+<Window x:Class="WinUiDemo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:WinUiDemo.Controls"
+        Title="Tempest WinUI demo">
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="12" MaxWidth="520">
+            <controls:TempestDemoControl x:Name="Demo" />
+
+            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="[Event] — published from outside the control" FontWeight="SemiBold" />
+                    <Button Click="BumpClicked" Content="Bump the counter by 5 (via the event bus)" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

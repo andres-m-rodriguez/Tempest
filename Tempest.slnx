@@ -1,8 +1,34 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Tempest.Blazor/Tempest.Blazor.csproj" />
+    <Project Path="src/Tempest.Compiler/Tempest.Compiler.csproj" />
+    <Project Path="src/Tempest.Abstract/Tempest.Abstract.csproj" />
+    <Project Path="src/Tempest.Emit/Tempest.Emit.csproj" />
+    <Project Path="src/Tempest.Generators/Tempest.Generators.csproj" />
     <Project Path="src/Tempest.Parsing/Tempest.Parsing.csproj" />
+    <Project Path="src/Tempest.Pipeline/Tempest.Pipeline.csproj" />
+    <Project Path="src/Tempest.WinUI/Tempest.WinUI.csproj" />
+    <Project Path="src/Tempest.Wpf/Tempest.Wpf.csproj" />
   </Folder>
   <Folder Name="/src/parsers/">
+    <Project Path="src/parsers/Tempest.CSharpParser/Tempest.CSharpParser.csproj" />
     <Project Path="src/parsers/Tempest.RazorParser/Tempest.RazorParser.csproj" />
+  </Folder>
+  <Folder Name="/demo/">
+    <Project Path="demo/StandAloneWebAssemblyDemo/StandAloneWebAssemblyDemo.csproj" />
+    <Project Path="demo/WinUiDemo/WinUiDemo.csproj" />
+    <Project Path="demo/WpfDemo/WpfDemo.csproj" />
+  </Folder>
+  <Folder Name="/demo/SharedStoreDemo/">
+    <Project Path="demo/SharedStoreDemo/SharedStoreDemo.Shared/SharedStoreDemo.Shared.csproj" />
+    <Project Path="demo/SharedStoreDemo/SharedStoreDemo.Wasm/SharedStoreDemo.Wasm.csproj" />
+    <Project Path="demo/SharedStoreDemo/SharedStoreDemo.WinUi/SharedStoreDemo.WinUi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tempest.Compiler.Tests/Tempest.Compiler.Tests.csproj" />
+    <Project Path="tests/Tempest.CSharpParser.Tests/Tempest.CSharpParser.Tests.csproj" />
+    <Project Path="tests/Tempest.Emit.Tests/Tempest.Emit.Tests.csproj" />
+    <Project Path="tests/Tempest.Generators.Tests/Tempest.Generators.Tests.csproj" />
+    <Project Path="tests/Tempest.RazorParser.Tests/Tempest.RazorParser.Tests.csproj" />
   </Folder>
 </Solution>

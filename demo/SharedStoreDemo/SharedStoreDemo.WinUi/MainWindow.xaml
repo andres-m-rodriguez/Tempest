@@ -1,0 +1,23 @@
+<Window x:Class="SharedStoreDemo.WinUi.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:SharedStoreDemo.WinUi.Controls"
+        Title="Tempest shared store (WinUI)">
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="12" MaxWidth="520">
+            <TextBlock Text="Tempest shared store" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Opacity="0.7" TextWrapping="Wrap"
+                       Text="Every piece of state in this window lives in DemoStore — the same class the WebAssembly app injects. This window is UI only." />
+
+            <controls:StoreControl />
+
+            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="[Event] — published from outside the control" FontWeight="SemiBold" />
+                    <Button Click="BumpClicked" Content="Bump the counter by 5 (via the event bus)" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

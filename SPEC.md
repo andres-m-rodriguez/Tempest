@@ -43,8 +43,8 @@ public sealed partial class TodoStore(ITodoApi api, IEventBus bus) : StatefulSto
 
 - Must be `partial` (the generated twin is the other half) and inherit a host base — TEM002 otherwise:
   - `StatefulComponent` / `StatefulLayoutComponent` — Blazor (also implicit for `.razor` files)
-  - `StatefulControl` — XAML *(planned)*
-  - `StatefulStore` — headless, constructor-DI, shared by any UI *(planned)*
+  - `StatefulControl` — XAML (Tempest.Wpf and Tempest.WinUI hosts)
+  - `StatefulStore` — headless, constructor-DI, shared by any UI (Tempest.Abstract)
 - Constructor injection is ordinary C#; `StatefulStore` takes the `IEventBus` it registers against.
 
 ## `[Reactive]` — state the class owns
@@ -71,7 +71,7 @@ public sealed partial class TodoStore(ITodoApi api, IEventBus bus) : StatefulSto
 
 ## The generated twin
 
-Framework-neutral C#: only `Tempest.Core` types plus four host-base members
+Framework-neutral C#: only `Tempest.Abstract` types plus four host-base members
 (`RegisterTempestHandlers`, `SubscribeEvent`, `DispatchEvent`, `InvokeAsync`).
 One emitter for every host — Blazor vs XAML vs store is a runtime base-class
 difference, never a codegen fork.
@@ -105,6 +105,6 @@ partial class TodoStore
 
 ## Open questions
 
-- **State accessibility**: today the state property mirrors its member's accessibility — right for components, wrong for stores (private field must yield a public `NewTitleState`). Leaning: public by default inside `StatefulStore`.
+- ~~**State accessibility**~~ *(resolved)*: the state property mirrors its member's accessibility for Blazor components (markup compiles into the class, so private is reachable), and is forced `public` for `StatefulControl` and `StatefulStore` hosts — WPF's binding engine reads only public properties, and a store's whole point is being consumed from outside. Host policy lives in the compiler; the emitter stays neutral.
 - **Host contract**: the four-member surface is a convention between emitter and bases; consider making it a real interface/abstract base in Core.
 - **Namespaces**: `Tempest.*` assemblies currently share the root `Tempest` namespace; revisit before a third host ships.

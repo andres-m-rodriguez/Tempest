@@ -1,0 +1,80 @@
+@page "/"
+@inherits Tempest.StatefulComponent
+
+<h1 class="mb-4">Tempest demo</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">[Reactive] + [OnChanged]</h2>
+        <input class="form-control mb-2" placeholder="Your name" value="@NameState.Value"
+               @oninput="e => NameState.Value = e.Value?.ToString() ?? string.Empty" />
+        @if (_greeting.Length > 0)
+        {
+            <p class="mb-1">@_greeting</p>
+        }
+        <span class="badge @(NameState.IsDirty ? "text-bg-warning" : "text-bg-secondary")">
+            @(NameState.IsDirty ? "Dirty" : "Pristine")
+        </span>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">[Reactive] counter</h2>
+        <p class="display-6 mb-3">@CountState.Value</p>
+        <button class="btn btn-primary me-2" @onclick="() => CountState.Value++">+1</button>
+        <button class="btn btn-outline-secondary" @onclick="CountState.Reset">Reset</button>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">[Command]</h2>
+        <button class="btn btn-success mb-2" disabled="@SaveState.IsLoading" @onclick="() => SaveState.Execute()">
+            @if (SaveState.IsLoading)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                <span>Saving…</span>
+            }
+            else
+            {
+                <span>Save</span>
+            }
+        </button>
+        <p class="text-body-secondary mb-0">
+            @(_savedAt is { } t ? $"Saved at {t:T}" : "Not saved yet")
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h2 class="card-title h5">[Event] — published from another component</h2>
+        <BumpPublisher />
+    </div>
+</div>
+
+@code {
+    [Reactive] private int _count;
+    [Reactive] private string _name = "";
+
+    private string _greeting = "";
+    private DateTime? _savedAt;
+
+    [OnChanged]
+    private void OnNameChanged(string value)
+        => _greeting = value.Length == 0 ? "" : $"Hello, {value}!";
+
+    [Command]
+    private async Task Save(CancellationToken ct)
+    {
+        await Task.Delay(800, ct);
+        _savedAt = DateTime.Now;
+    }
+
+    public sealed record CounterBumped(int By);
+
+    [Event]
+    private void OnCounterBumped(CounterBumped e)
+        => CountState.Value += e.By;
+}

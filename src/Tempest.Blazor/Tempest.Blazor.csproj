@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Tempest</RootNamespace>
+    <PackageId>Tempest.Blazor</PackageId>
+    <Version>1.0.0-beta.5</Version>
+    <Description>Component-owned state for Blazor: the StatefulComponent bases on top of Tempest.Abstract. Three attributes and a bus; the source generator ships with Tempest.Abstract.</Description>
+    <Authors>andresitomanuel</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageOutputPath>..\..\artifacts</PackageOutputPath>
+    <PackageTags>blazor;state;state-management;source-generator;events</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tempest.Abstract\Tempest.Abstract.csproj" />
+  </ItemGroup>
+
+</Project>

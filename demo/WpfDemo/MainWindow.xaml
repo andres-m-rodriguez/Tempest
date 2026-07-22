@@ -1,0 +1,13 @@
+<Window x:Class="WpfDemo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:WpfDemo.Controls"
+        Title="Tempest WPF demo" Width="520" Height="560">
+    <StackPanel Margin="24">
+        <controls:TempestDemoControl x:Name="Demo" />
+
+        <GroupBox Header="[Event] — published from outside the control" Padding="12" Margin="0,12,0,0">
+            <Button Click="BumpClicked" Content="Bump the counter by 5 (via the event bus)" />
+        </GroupBox>
+    </StackPanel>
+</Window>

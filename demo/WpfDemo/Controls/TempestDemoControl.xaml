@@ -1,0 +1,42 @@
+<tempest:StatefulControl x:Class="WpfDemo.Controls.TempestDemoControl"
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:tempest="clr-namespace:Tempest;assembly=Tempest.Wpf">
+    <StackPanel>
+        <GroupBox Header="[Reactive] + [OnChanged]" Padding="12">
+            <StackPanel>
+                <TextBox Text="{Binding NameState.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Text="{Binding Greeting}" Margin="0,6,0,0" />
+                <TextBlock Text="{Binding DirtyText}" Foreground="Gray" FontSize="11" Margin="0,2,0,0" />
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="[Reactive] counter" Padding="12" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding CountState.Value}" FontSize="28" Margin="0,0,16,0"
+                           VerticalAlignment="Center" />
+                <Button Click="IncrementClicked" Content="+1" Margin="0,0,8,0" Padding="12,4" />
+                <Button Click="ResetClicked" Content="Reset" Padding="12,4" />
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="[Command]" Padding="12" Margin="0,12,0,0">
+            <StackPanel>
+                <Button Click="SaveClicked" HorizontalAlignment="Left" Padding="12,4">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Content" Value="Save" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SaveState.IsLoading}" Value="True">
+                                    <Setter Property="Content" Value="Saving…" />
+                                    <Setter Property="IsEnabled" Value="False" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <TextBlock Text="{Binding SavedAtText}" Foreground="Gray" Margin="0,6,0,0" />
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</tempest:StatefulControl>

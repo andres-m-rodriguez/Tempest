@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Tempest</RootNamespace>
+    <PackageId>Tempest.Wpf</PackageId>
+    <Version>1.0.0-beta.5</Version>
+    <Description>Component-owned state for WPF: the StatefulControl host base on top of Tempest.Abstract. Same attributes, same generated twin — re-rendering maps to an INotifyPropertyChanged broadcast.</Description>
+    <Authors>andresitomanuel</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageOutputPath>..\..\artifacts</PackageOutputPath>
+    <PackageTags>wpf;state;state-management;source-generator;events</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tempest.Abstract\Tempest.Abstract.csproj" />
+  </ItemGroup>
+
+</Project>

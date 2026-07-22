@@ -1,0 +1,64 @@
+@page "/"
+@implements IDisposable
+@inject DemoStore Store
+@inject IEventBus Bus
+
+<h1 class="mb-1">Tempest shared store</h1>
+<p class="text-body-secondary mb-4">
+    Every piece of state on this page lives in <code>DemoStore</code> — the same class
+    the WinUI app binds to. This .razor file is UI only.
+</p>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">[Reactive] + [OnChanged]</h2>
+        <input class="form-control mb-2" placeholder="Your name" value="@Store.NameState.Value"
+               @oninput="e => Store.NameState.Value = e.Value?.ToString() ?? string.Empty" />
+        @if (Store.Greeting.Length > 0)
+        {
+            <p class="mb-1">@Store.Greeting</p>
+        }
+        <span class="badge @(Store.NameState.IsDirty ? "text-bg-warning" : "text-bg-secondary")">
+            @Store.DirtyText
+        </span>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">[Reactive] counter</h2>
+        <p class="display-6 mb-3">@Store.CountState.Value</p>
+        <button class="btn btn-primary me-2" @onclick="() => Store.CountState.Value++">+1</button>
+        <button class="btn btn-outline-secondary" @onclick="Store.CountState.Reset">Reset</button>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">[Command]</h2>
+        <button class="btn btn-success mb-2" disabled="@(!Store.SaveEnabled)"
+                @onclick="() => Store.SaveState.TryExecute()">
+            @Store.SaveLabel
+        </button>
+        <p class="text-body-secondary mb-0">@Store.SavedAtText</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h2 class="card-title h5">[Event] — published straight on the bus</h2>
+        <button class="btn btn-outline-primary"
+                @onclick='() => Bus.Publish(new DemoStore.CounterBumped(5))'>
+            Bump the counter by 5 (via the event bus)
+        </button>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized() => Store.PropertyChanged += OnStoreChanged;
+
+    private void OnStoreChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Store.PropertyChanged -= OnStoreChanged;
+}

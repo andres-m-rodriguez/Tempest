@@ -1,0 +1,5 @@
+@inject Tempest.IEventBus Bus
+
+<button class="btn btn-outline-primary" @onclick="() => Bus.Publish(new Home.CounterBumped(5))">
+    Bump the counter by 5 (via the event bus)
+</button>

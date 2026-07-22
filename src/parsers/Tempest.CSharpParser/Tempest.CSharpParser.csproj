@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Tempest.Parsing\Tempest.Parsing.csproj" />
+    <ProjectReference Include="..\..\Tempest.Pipeline\Tempest.Pipeline.csproj" />
   </ItemGroup>
 
 </Project>

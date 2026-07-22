@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Tempest</RootNamespace>
+    <PackageId>Tempest.Abstract</PackageId>
+    <Version>1.0.0-beta.5</Version>
+    <Description>Platform-neutral core for Tempest: the [Command]/[Reactive]/[Event]/[OnChanged] attributes, the event bus, the CommandState/ReactiveState families, the headless StatefulStore host — and the source generator that emits the state twins. UI hosts (Tempest.Blazor, Tempest.Wpf, Tempest.WinUI) build on this.</Description>
+    <Authors>andresitomanuel</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageOutputPath>..\..\artifacts</PackageOutputPath>
+    <PackageTags>blazor;wpf;winui;state;state-management;source-generator;events</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+  <!-- Ship the source generator and its pipeline libraries inside this package, so
+       every host inherits them from the one common dependency. The project references
+       only guarantee build order (the generator has nothing to generate here); the
+       None items place the DLLs where the compiler loads analyzers from. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Tempest.Generators\Tempest.Generators.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Tempest.Pipeline\Tempest.Pipeline.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Tempest.Parsing\Tempest.Parsing.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\parsers\Tempest.RazorParser\Tempest.RazorParser.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\parsers\Tempest.CSharpParser\Tempest.CSharpParser.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Tempest.Compiler\Tempest.Compiler.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Tempest.Emit\Tempest.Emit.csproj" ReferenceOutputAssembly="false" />
+    <None Include="..\Tempest.Generators\bin\$(Configuration)\netstandard2.0\Tempest.Generators.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\Tempest.Pipeline\bin\$(Configuration)\netstandard2.0\Tempest.Pipeline.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\Tempest.Parsing\bin\$(Configuration)\netstandard2.0\Tempest.Parsing.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\parsers\Tempest.RazorParser\bin\$(Configuration)\netstandard2.0\Tempest.RazorParser.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\parsers\Tempest.CSharpParser\bin\$(Configuration)\netstandard2.0\Tempest.CSharpParser.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\Tempest.Compiler\bin\$(Configuration)\netstandard2.0\Tempest.Compiler.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\Tempest.Emit\bin\$(Configuration)\netstandard2.0\Tempest.Emit.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
+</Project>
