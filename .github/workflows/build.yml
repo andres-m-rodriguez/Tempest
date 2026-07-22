@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: [master, main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  build:
+    # Windows runner: the solution includes WPF and WinUI targets.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # Builds every project (pipeline, hosts, demos) and runs all five test suites —
+      # the demos compiling under the real generator is part of the coverage.
+      - name: Test
+        run: dotnet test Tempest.slnx --configuration Release
+
+      - name: Pack
+        run: |
+          dotnet pack src/Tempest.Abstract/Tempest.Abstract.csproj -c Release
+          dotnet pack src/Tempest.Blazor/Tempest.Blazor.csproj -c Release
+          dotnet pack src/Tempest.Wpf/Tempest.Wpf.csproj -c Release
+          dotnet pack src/Tempest.WinUI/Tempest.WinUI.csproj -c Release
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/*.nupkg
+
+      # Publishing runs only for version tags (v1.0.0-beta.5, …); pushes to branches
+      # and pull requests stop at pack. Requires the NUGET_API_KEY repository secret.
+      - name: Publish to NuGet
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: dotnet nuget push artifacts\*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicates
