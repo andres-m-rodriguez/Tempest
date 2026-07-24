@@ -43,7 +43,8 @@ internal sealed class RazorEntryReader
     {
         var text = source.Text;
         if (!text.Contains("[Command") && !text.Contains("[Event") &&
-            !text.Contains("[Reactive") && !text.Contains("[OnChanged"))
+            !text.Contains("[Reactive") && !text.Contains("[OnChanged") &&
+            !text.Contains("[CanExecute"))
             return TempestDocument.Empty;
 
         var componentName = _sanitize.SanitizeIdentifier(source.ComponentName);
@@ -71,6 +72,7 @@ internal sealed class RazorEntryReader
         var methods = new List<SourceMethod>();
         var reactiveFields = new List<(string FieldName, string TypeText, bool Valid, string Accessibility, SourceSpan Span)>();
         var hooks = new List<SourceHook>();
+        var canExecutes = new List<SourceCanExecute>();
 
         foreach (var block in document.OfType<CodeBlockNode>())
         {
@@ -103,6 +105,22 @@ internal sealed class RazorEntryReader
                         _syntax.MapSpan(sourceText, variable.Identifier.Span, blockStart)));
             }
 
+            foreach (var property in cls.Members.OfType<PropertyDeclarationSyntax>())
+            {
+                if (_syntax.FindAttribute(property.AttributeLists, "CanExecute") is not { } gate)
+                    continue;
+
+                canExecutes.Add(new SourceCanExecute(
+                    Namespace: ns,
+                    ComponentName: componentName,
+                    MemberName: property.Identifier.ValueText,
+                    ExplicitTarget: _syntax.ExplicitHookTarget(gate),
+                    ReturnsBool: _syntax.IsBool(property.Type.ToString()),
+                    IsMethod: false,
+                    ParameterCount: 0,
+                    Span: _syntax.MapSpan(sourceText, property.Identifier.Span, blockStart)));
+            }
+
             foreach (var method in cls.Members.OfType<MethodDeclarationSyntax>())
             {
                 var span = _syntax.MapSpan(sourceText, method.Identifier.Span, blockStart);
@@ -110,13 +128,30 @@ internal sealed class RazorEntryReader
 
                 var isCommand = false;
                 var isEvent = false;
+                var runOnLoad = false;
                 AttributeSyntax? onChanged = null;
+                AttributeSyntax? canExecute = null;
                 foreach (var attr in method.AttributeLists.SelectMany(l => l.Attributes))
                 {
                     var name = _syntax.SimpleAttributeName(attr.Name.ToString());
                     if (name == "Command") isCommand = true;
                     if (name == "Event") isEvent = true;
+                    if (name == "RunOnLoad") runOnLoad = true;
                     if (name == "OnChanged") onChanged ??= attr;
+                    if (name == "CanExecute") canExecute ??= attr;
+                }
+
+                if (canExecute is not null)
+                {
+                    canExecutes.Add(new SourceCanExecute(
+                        Namespace: ns,
+                        ComponentName: componentName,
+                        MemberName: methodName,
+                        ExplicitTarget: _syntax.ExplicitHookTarget(canExecute),
+                        ReturnsBool: _syntax.IsBool(method.ReturnType.ToString()),
+                        IsMethod: true,
+                        ParameterCount: method.ParameterList.Parameters.Count,
+                        Span: span));
                 }
 
                 if (onChanged is not null)
@@ -161,6 +196,7 @@ internal sealed class RazorEntryReader
                     MethodName: methodName,
                     IsCommand: isCommand,
                     IsEvent: isEvent,
+                    RunOnLoad: runOnLoad,
                     Kind: kind,
                     ResultType: resultType,
                     HasCancellationToken: hasCt,
@@ -198,6 +234,7 @@ internal sealed class RazorEntryReader
             Commands: new EquatableArray<SourceMethod>(methods.Where(m => m.IsCommand).ToArray()),
             Events: new EquatableArray<SourceMethod>(methods.Where(m => m.IsEvent).ToArray()),
             Reactives: new EquatableArray<SourceReactiveProperty>(reactives.ToArray()),
-            Hooks: new EquatableArray<SourceHook>(hooks.ToArray()));
+            Hooks: new EquatableArray<SourceHook>(hooks.ToArray()),
+            CanExecutes: new EquatableArray<SourceCanExecute>(canExecutes.ToArray()));
     }
 }

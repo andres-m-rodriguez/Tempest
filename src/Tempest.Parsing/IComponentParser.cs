@@ -31,6 +31,12 @@ public interface IComponentParser<in TSource>
     Result<EquatableArray<SourceHook>> ParseHooks(TSource source);
 
     /// <summary>
+    /// Every [CanExecute] member the source declares, resolvable or not — which
+    /// command a gate serves is the compiler's decision.
+    /// </summary>
+    Result<EquatableArray<SourceCanExecute>> ParseCanExecutes(TSource source);
+
+    /// <summary>
     /// Every method bearing [Command]. A combined [Event, Command] method is
     /// returned here and by <see cref="ParseEvents"/> with identical flags; the compiler
     /// groups by identity.

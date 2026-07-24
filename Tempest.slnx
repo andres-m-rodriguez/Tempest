@@ -25,6 +25,7 @@
     <Project Path="demo/SharedStoreDemo/SharedStoreDemo.WinUi/SharedStoreDemo.WinUi.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Tempest.Abstract.Tests/Tempest.Abstract.Tests.csproj" />
     <Project Path="tests/Tempest.Compiler.Tests/Tempest.Compiler.Tests.csproj" />
     <Project Path="tests/Tempest.CSharpParser.Tests/Tempest.CSharpParser.Tests.csproj" />
     <Project Path="tests/Tempest.Emit.Tests/Tempest.Emit.Tests.csproj" />

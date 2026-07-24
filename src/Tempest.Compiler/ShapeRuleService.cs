@@ -40,6 +40,15 @@ internal sealed class ShapeRuleService
                 Severity: TempestDiagnosticSeverity.Error,
                 Span: method.Span);
 
+        if (method.RunOnLoad && method.IsEvent)
+            return new(
+                Id: "TEM014",
+                Title: "[RunOnLoad] cannot run an [Event] command",
+                Message: $"[RunOnLoad] on '{method.MethodName}' has no event record to run it with; only a parameterless [Command] can run on load",
+                ComponentName: method.ComponentName,
+                Severity: TempestDiagnosticSeverity.Error,
+                Span: method.Span);
+
         return null;
     }
 
@@ -80,4 +89,31 @@ internal sealed class ShapeRuleService
         ComponentName: hook.ComponentName,
         Severity: TempestDiagnosticSeverity.Warning,
         Span: hook.Span);
+
+    internal TempestDiagnostic? JudgeCanExecute(SourceCanExecute gate)
+        => gate.ReturnsBool && gate.ParameterCount == 0
+            ? null
+            : new(
+                Id: "TEM013",
+                Title: "[CanExecute] member has the wrong shape",
+                Message: $"[CanExecute] member '{gate.MemberName}' must be a bool property or a parameterless bool method",
+                ComponentName: gate.ComponentName,
+                Severity: TempestDiagnosticSeverity.Error,
+                Span: gate.Span);
+
+    internal TempestDiagnostic UnmatchedCanExecute(SourceCanExecute gate) => new(
+        Id: "TEM011",
+        Title: "[CanExecute] member matches no [Command]",
+        Message: $"[CanExecute] member '{gate.MemberName}' matches no [Command] of this component; name it On{{Command}}CanExecute or pass the command's method name to the attribute",
+        ComponentName: gate.ComponentName,
+        Severity: TempestDiagnosticSeverity.Error,
+        Span: gate.Span);
+
+    internal TempestDiagnostic DuplicateCanExecute(SourceCanExecute gate, string commandName) => new(
+        Id: "TEM012",
+        Title: "[Command] has multiple enablement gates",
+        Message: $"[Command] '{commandName}' already has a [CanExecute] gate; '{gate.MemberName}' is ignored",
+        ComponentName: gate.ComponentName,
+        Severity: TempestDiagnosticSeverity.Warning,
+        Span: gate.Span);
 }

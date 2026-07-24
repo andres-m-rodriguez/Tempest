@@ -4,7 +4,7 @@ namespace Tempest;
 
 public sealed class EventBus(ILogger<EventBus>? logger = null) : IEventBus
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly Dictionary<Type, List<Subscription>> _handlers = [];
 
     public void Publish<TEvent>() where TEvent : new() => Publish(new TEvent());

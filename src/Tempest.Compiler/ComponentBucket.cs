@@ -10,4 +10,5 @@ internal sealed record ComponentBucket(
     string Name,
     IReadOnlyList<SourceMethod> Methods,
     IReadOnlyList<SourceReactiveProperty> Reactives,
-    IReadOnlyList<SourceHook> Hooks);
+    IReadOnlyList<SourceHook> Hooks,
+    IReadOnlyList<SourceCanExecute> CanExecutes);

@@ -206,6 +206,38 @@ public class TempestGeneratorTests
     }
 
     [Fact]
+    public void RunOnLoadCommandFiresInGeneratedRegistration()
+    {
+        var result = Run(("Cart.razor", """
+            @inherits Tempest.StatefulComponent
+            @code {
+                [Command, RunOnLoad]
+                private Task Load(CancellationToken ct) => Task.CompletedTask;
+            }
+            """));
+
+        Assert.Empty(result.Diagnostics);
+        var source = Assert.Single(Assert.Single(result.Results).GeneratedSources).SourceText.ToString();
+        Assert.Contains("_ = LoadState.TryExecute();", source);
+    }
+
+    [Fact]
+    public void CanExecuteGateFlowsIntoTheGeneratedPredicate()
+    {
+        var result = Run(("Cart.razor", """
+            @inherits Tempest.StatefulComponent
+            @code {
+                [Command] private void Next() { }
+                [CanExecute] public bool OnNextCanExecute { get; private set; }
+            }
+            """));
+
+        Assert.Empty(result.Diagnostics);
+        var source = Assert.Single(Assert.Single(result.Results).GeneratedSources).SourceText.ToString();
+        Assert.Contains("() => OnNextCanExecute);", source);
+    }
+
+    [Fact]
     public void GeneratedCodeCompilesAgainstTheRuntime()
     {
         var result = Run(("Pages/Cart.razor", Cart));

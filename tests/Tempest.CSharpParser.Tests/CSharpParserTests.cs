@@ -22,6 +22,11 @@ public class CSharpParserTests
                 public OnChangedAttribute() { }
                 public OnChangedAttribute(string target) { }
             }
+            public sealed class CanExecuteAttribute : System.Attribute
+            {
+                public CanExecuteAttribute() { }
+                public CanExecuteAttribute(string target) { }
+            }
             public abstract class StatefulComponent { }
             public abstract class StatefulControl { }
             public abstract class StatefulStore { }
@@ -148,6 +153,35 @@ public class CSharpParserTests
         Assert.Equal("_count", targeted.ExplicitTarget);
         Assert.True(targeted.ReturnsTask);
         Assert.Equal(1, targeted.ParameterCount);
+    }
+
+    [Fact]
+    public void CanExecuteMembersAreCollectedFromPropertiesAndMethods()
+    {
+        var document = Parse("""
+            namespace App;
+            public sealed partial class C : Tempest.StatefulComponent
+            {
+                [Tempest.Command] private void Next() { }
+                [Tempest.CanExecute] public bool CanNext { get; private set; }
+                [Tempest.CanExecute(nameof(Next))] private bool HasSession() => true;
+                [Tempest.CanExecute] public int NotABool { get; set; }
+            }
+            """);
+
+        Assert.Equal(3, document.CanExecutes.Count);
+
+        var property = Assert.Single(document.CanExecutes, c => c.MemberName == "CanNext");
+        Assert.Null(property.ExplicitTarget);
+        Assert.True(property.ReturnsBool);
+        Assert.False(property.IsMethod);
+
+        var method = Assert.Single(document.CanExecutes, c => c.MemberName == "HasSession");
+        Assert.Equal("Next", method.ExplicitTarget);
+        Assert.True(method.IsMethod);
+        Assert.Equal(0, method.ParameterCount);
+
+        Assert.False(Assert.Single(document.CanExecutes, c => c.MemberName == "NotABool").ReturnsBool);
     }
 
     [Fact]

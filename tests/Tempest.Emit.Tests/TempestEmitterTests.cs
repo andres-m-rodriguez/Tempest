@@ -27,15 +27,16 @@ public class TempestEmitterTests
 
     private static CompiledMethod Command(
         string name, ReturnKind kind, string? resultType = null, bool ct = false,
+        CompiledCanExecute? canExecute = null, bool runOnLoad = false,
         string accessibility = "public")
-        => new(name, IsCommand: true, IsEvent: false, kind, resultType, ct,
-            ParamType: null, ParamTypeName: null, accessibility);
+        => new(name, IsCommand: true, IsEvent: false, runOnLoad, kind, resultType, ct,
+            ParamType: null, ParamTypeName: null, canExecute, accessibility);
 
     private static CompiledMethod EventHandler(
         string name, ReturnKind kind, string paramType, string paramTypeName,
         bool isCommand = false, bool ct = false, string accessibility = "private")
-        => new(name, isCommand, IsEvent: true, kind, ResultType: null, ct,
-            paramType, paramTypeName, accessibility);
+        => new(name, isCommand, IsEvent: true, RunOnLoad: false, kind, ResultType: null, ct,
+            paramType, paramTypeName, CanExecute: null, accessibility);
 
     private static CompiledReactive Reactive(
         string field = "_title", string property = "Title", string type = "string",
@@ -109,6 +110,18 @@ public class TempestEmitterTests
     }
 
     [Fact]
+    public void CanExecuteGatesEmitAsPredicates()
+    {
+        var property = EmitValid(Component(methods: [
+            Command("Next", ReturnKind.Task, canExecute: new CompiledCanExecute("CanNext", IsMethod: false))]));
+        var method = EmitValid(Component(methods: [
+            Command("Save", ReturnKind.Task, canExecute: new CompiledCanExecute("HasSession", IsMethod: true))]));
+
+        Assert.Contains("new global::Tempest.CommandState(this, __ct => Next(), () => CanNext);", property);
+        Assert.Contains("new global::Tempest.CommandState(this, __ct => Save(), () => HasSession());", method);
+    }
+
+    [Fact]
     public void CommandWithCancellationTokenForwardsIt()
     {
         var source = EmitValid(Component(methods: [Command("Save", ReturnKind.Task, ct: true)]));
@@ -168,6 +181,15 @@ public class TempestEmitterTests
         var source = EmitValid(Component(methods: [Command("Save", ReturnKind.Task)]));
 
         Assert.DoesNotContain("RegisterTempestHandlers", source);
+    }
+
+    [Fact]
+    public void RunOnLoadCommandFiresInRegistration()
+    {
+        var source = EmitValid(Component(methods: [Command("Load", ReturnKind.Task, runOnLoad: true)]));
+
+        Assert.Contains("RegisterTempestHandlers", source);
+        Assert.Contains("_ = LoadState.TryExecute();", source);
     }
 
     [Fact]

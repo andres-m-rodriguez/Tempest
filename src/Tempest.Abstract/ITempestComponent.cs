@@ -11,4 +11,13 @@ public interface ITempestComponent
     /// <summary>Run a reactive hook through the sync context; a throwing hook surfaces
     /// to Blazor's error handling like a throwing event handler, never an unobserved task.</summary>
     void DispatchReaction(Func<Task> reaction);
+
+    /// <summary>Called by every command state on construction. Hosts whose bindings go
+    /// through ICommand (XAML controls, stores) keep the registry and raise
+    /// CanExecuteChanged on each re-render broadcast, so [CanExecute] members re-gate
+    /// buttons when state changes; the default ignores it — Blazor markup re-evaluates
+    /// on render without ICommand.</summary>
+    void RegisterCommand(CommandStateBase command)
+    {
+    }
 }

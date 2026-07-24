@@ -14,6 +14,8 @@ namespace Tempest;
 public abstract class StatefulStore : ITempestComponent, INotifyPropertyChanged, IDisposable
 {
     private readonly List<IDisposable> _subscriptions = [];
+    private readonly List<CommandStateBase> _commands = [];
+    private readonly SynchronizationContext? _context = SynchronizationContext.Current;
 
     protected StatefulStore(IEventBus bus)
     {
@@ -50,6 +52,42 @@ public abstract class StatefulStore : ITempestComponent, INotifyPropertyChanged,
     /// one of the four members the generated twin calls.</summary>
     protected Task InvokeAsync(Func<Task> work) => work();
 
+    /// <summary>The blessed mutate-and-notify primitive: run a batch of property
+    /// writes, broadcast once. Off-thread callers are marshalled to the
+    /// SynchronizationContext the store was constructed on (the UI thread, in
+    /// practice), so INPC never fires from a worker thread.</summary>
+    protected Task Mutate(Action mutation)
+        => Mutate(() =>
+        {
+            mutation();
+            return Task.CompletedTask;
+        });
+
+    /// <summary>Async form of <see cref="Mutate(Action)"/>.</summary>
+    protected Task Mutate(Func<Task> mutation)
+    {
+        if (_context is null || SynchronizationContext.Current == _context)
+            return DispatchEvent(mutation);
+
+        var completion = new TaskCompletionSource();
+        _context.Post(async _ =>
+        {
+            try
+            {
+                await mutation();
+                NotifyStateChanged();
+                completion.SetResult();
+            }
+            catch (Exception ex)
+            {
+                completion.SetException(ex);
+            }
+        }, null);
+        return completion.Task;
+    }
+
+    void ITempestComponent.RegisterCommand(CommandStateBase command) => _commands.Add(command);
+
     void ITempestComponent.Rerender() => NotifyStateChanged();
 
     void ITempestComponent.DispatchReaction(Func<Task> reaction) => RunReaction(reaction);
@@ -70,5 +108,11 @@ public abstract class StatefulStore : ITempestComponent, INotifyPropertyChanged,
     }
 
     private void NotifyStateChanged()
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+
+        // State changed, so [CanExecute] members may have too — bound controls re-gate.
+        foreach (var command in _commands)
+            command.RaiseCanExecuteChanged();
+    }
 }

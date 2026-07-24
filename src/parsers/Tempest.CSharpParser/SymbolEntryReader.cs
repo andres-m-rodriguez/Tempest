@@ -14,6 +14,8 @@ internal sealed class SymbolEntryReader
     private const string EventAttribute = "Tempest.EventAttribute";
     private const string ReactiveAttribute = "Tempest.ReactiveAttribute";
     private const string OnChangedAttribute = "Tempest.OnChangedAttribute";
+    private const string CanExecuteAttribute = "Tempest.CanExecuteAttribute";
+    private const string RunOnLoadAttribute = "Tempest.RunOnLoadAttribute";
 
     private readonly SymbolFactsService _facts = new();
 
@@ -41,16 +43,28 @@ internal sealed class SymbolEntryReader
         var methods = new List<SourceMethod>();
         var reactives = new List<SourceReactiveProperty>();
         var hooks = new List<SourceHook>();
+        var canExecutes = new List<SourceCanExecute>();
 
         foreach (var member in component.GetMembers())
         {
             switch (member)
             {
                 case IMethodSymbol { MethodKind: MethodKind.Ordinary } method:
-                    ReadMethod(component, ns, host, method, methods, hooks);
+                    ReadMethod(component, ns, host, method, methods, hooks, canExecutes);
                     break;
                 case IFieldSymbol field when HasAttribute(field, ReactiveAttribute):
                     reactives.Add(ReadReactive(component, ns, host, field));
+                    break;
+                case IPropertySymbol property when FindAttribute(property, CanExecuteAttribute) is { } gate:
+                    canExecutes.Add(new SourceCanExecute(
+                        Namespace: ns,
+                        ComponentName: component.Name,
+                        MemberName: property.Name,
+                        ExplicitTarget: gate.ConstructorArguments.FirstOrDefault().Value as string,
+                        ReturnsBool: property.Type.SpecialType == SpecialType.System_Boolean,
+                        IsMethod: false,
+                        ParameterCount: 0,
+                        Span: _facts.Span(property)));
                     break;
             }
         }
@@ -59,24 +73,42 @@ internal sealed class SymbolEntryReader
             Commands: new EquatableArray<SourceMethod>(methods.Where(m => m.IsCommand).ToArray()),
             Events: new EquatableArray<SourceMethod>(methods.Where(m => m.IsEvent).ToArray()),
             Reactives: new EquatableArray<SourceReactiveProperty>(reactives.ToArray()),
-            Hooks: new EquatableArray<SourceHook>(hooks.ToArray()));
+            Hooks: new EquatableArray<SourceHook>(hooks.ToArray()),
+            CanExecutes: new EquatableArray<SourceCanExecute>(canExecutes.ToArray()));
     }
 
     private void ReadMethod(
         INamedTypeSymbol component, string ns, HostKind host, IMethodSymbol method,
-        List<SourceMethod> methods, List<SourceHook> hooks)
+        List<SourceMethod> methods, List<SourceHook> hooks, List<SourceCanExecute> canExecutes)
     {
         var isCommand = false;
         var isEvent = false;
+        var runOnLoad = false;
         AttributeData? onChanged = null;
+        AttributeData? canExecute = null;
         foreach (var attribute in method.GetAttributes())
         {
             switch (attribute.AttributeClass?.ToDisplayString())
             {
                 case CommandAttribute: isCommand = true; break;
                 case EventAttribute: isEvent = true; break;
+                case RunOnLoadAttribute: runOnLoad = true; break;
                 case OnChangedAttribute: onChanged ??= attribute; break;
+                case CanExecuteAttribute: canExecute ??= attribute; break;
             }
+        }
+
+        if (canExecute is not null)
+        {
+            canExecutes.Add(new SourceCanExecute(
+                Namespace: ns,
+                ComponentName: component.Name,
+                MemberName: method.Name,
+                ExplicitTarget: canExecute.ConstructorArguments.FirstOrDefault().Value as string,
+                ReturnsBool: method.ReturnType.SpecialType == SpecialType.System_Boolean,
+                IsMethod: true,
+                ParameterCount: method.Parameters.Length,
+                Span: _facts.Span(method)));
         }
 
         if (onChanged is not null)
@@ -120,6 +152,7 @@ internal sealed class SymbolEntryReader
             MethodName: method.Name,
             IsCommand: isCommand,
             IsEvent: isEvent,
+            RunOnLoad: runOnLoad,
             Kind: kind,
             ResultType: resultType,
             HasCancellationToken: hasCt,
@@ -157,4 +190,7 @@ internal sealed class SymbolEntryReader
 
     private static bool HasAttribute(ISymbol symbol, string attributeName)
         => symbol.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == attributeName);
+
+    private static AttributeData? FindAttribute(ISymbol symbol, string attributeName)
+        => symbol.GetAttributes().FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == attributeName);
 }

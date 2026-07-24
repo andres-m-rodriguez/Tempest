@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Tempest</RootNamespace>
     <PackageId>Tempest.WinUI</PackageId>
-    <Version>1.0.0-beta.5</Version>
+    <Version>1.0.0-beta.6</Version>
     <Description>Component-owned state for WinUI 3: the StatefulControl host base on top of Tempest.Abstract. Same attributes, same generated twin — re-rendering maps to an INotifyPropertyChanged broadcast on the DispatcherQueue.</Description>
     <Authors>andresitomanuel</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

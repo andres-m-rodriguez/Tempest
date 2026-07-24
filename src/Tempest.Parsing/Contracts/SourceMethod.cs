@@ -12,6 +12,9 @@ public sealed record SourceMethod(
     string MethodName,
     bool IsCommand,
     bool IsEvent,
+    /// <summary>True when [RunOnLoad] is stacked on the command — the generated
+    /// registration runs it when the host initializes.</summary>
+    bool RunOnLoad,
     ReturnKind Kind,
     /// <summary>The T of Task&lt;T&gt;/ValueTask&lt;T&gt;, or the sync return type; null when the
     /// method returns nothing.</summary>

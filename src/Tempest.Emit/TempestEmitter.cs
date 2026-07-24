@@ -107,10 +107,18 @@ public sealed class TempestEmitter
             _ => $"{lambdaParams} => {{ {call}; return {TaskType}.CompletedTask; }}",
         };
 
+        // A wired [CanExecute] member becomes the state's ICommand predicate.
+        var canExecute = method.CanExecute switch
+        {
+            null => "",
+            { IsMethod: true } gate => $", () => {gate.MemberName}()",
+            { } gate => $", () => {gate.MemberName}",
+        };
+
         sb.AppendLine($"{body}private {stateType}? {backing};");
         sb.AppendLine();
         sb.AppendLine($"{body}/// <summary>State for the {name} command: IsLoading, Error, Execute, TryExecute.</summary>");
-        sb.AppendLine($"{body}{method.Accessibility} {stateType} {name}State => {backing} ??= new {stateType}(this, {command});");
+        sb.AppendLine($"{body}{method.Accessibility} {stateType} {name}State => {backing} ??= new {stateType}(this, {command}{canExecute});");
         sb.AppendLine();
     }
 
@@ -143,13 +151,16 @@ public sealed class TempestEmitter
     private static void WriteRegisterTempestHandlers(StringBuilder sb, string body, CompiledComponent component)
     {
         var events = new List<CompiledMethod>();
+        var runOnLoad = new List<CompiledMethod>();
         foreach (var method in component.Methods)
         {
             if (method.IsEvent)
                 events.Add(method);
+            if (method.RunOnLoad)
+                runOnLoad.Add(method);
         }
 
-        if (events.Count == 0 && component.Reactives.Count == 0)
+        if (events.Count == 0 && component.Reactives.Count == 0 && runOnLoad.Count == 0)
             return;
 
         sb.AppendLine($"{body}protected override void RegisterTempestHandlers(global::Tempest.IEventBus bus)");
@@ -175,6 +186,11 @@ public sealed class TempestEmitter
         {
             // Touch each reactive state so Initial captures the field's initializer value.
             sb.AppendLine($"{body}    _ = {reactive.PropertyName}State;");
+        }
+        foreach (var method in runOnLoad)
+        {
+            // [RunOnLoad]: fire-safe, so a failing load lands in {Name}State.Error.
+            sb.AppendLine($"{body}    _ = {method.MethodName}State.TryExecute();");
         }
         sb.AppendLine($"{body}}}");
     }

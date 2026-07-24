@@ -28,21 +28,31 @@ internal sealed class ComponentGroupingService
             .Select(g => g.First())
             .ToList();
 
+        var canExecutes = documents
+            .SelectMany(d => d.CanExecutes)
+            .GroupBy(c => (c.Namespace, c.ComponentName, c.MemberName))
+            .Select(g => g.First())
+            .ToList();
+
         var methodsByComponent = methods.ToLookup(m => (m.Namespace, m.ComponentName));
         var reactivesByComponent = reactives.ToLookup(r => (r.Namespace, r.ComponentName));
         var hooksByComponent = hooks.ToLookup(h => (h.Namespace, h.ComponentName));
+        var canExecutesByComponent = canExecutes.ToLookup(c => (c.Namespace, c.ComponentName));
 
-        // Hook-only components still get a bucket, so unresolvable hooks get diagnosed.
+        // Wiring-only components still get a bucket, so unresolvable hooks and gates
+        // get diagnosed.
         return methods.Select(m => (m.Namespace, m.ComponentName))
             .Concat(reactives.Select(r => (r.Namespace, r.ComponentName)))
             .Concat(hooks.Select(h => (h.Namespace, h.ComponentName)))
+            .Concat(canExecutes.Select(c => (c.Namespace, c.ComponentName)))
             .Distinct()
             .Select(key => new ComponentBucket(
                 key.Namespace,
                 key.ComponentName,
                 methodsByComponent[key].ToList(),
                 reactivesByComponent[key].ToList(),
-                hooksByComponent[key].ToList()))
+                hooksByComponent[key].ToList(),
+                canExecutesByComponent[key].ToList()))
             .ToList();
     }
 }

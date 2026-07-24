@@ -25,6 +25,9 @@ public sealed class RazorParser : IComponentParser<RazorSource>
     public Result<EquatableArray<SourceHook>> ParseHooks(RazorSource source)
         => Entries(source).Map(e => e.Hooks);
 
+    public Result<EquatableArray<SourceCanExecute>> ParseCanExecutes(RazorSource source)
+        => Entries(source).Map(e => e.CanExecutes);
+
     public Result<EquatableArray<SourceMethod>> ParseCommands(RazorSource source)
         => Entries(source).Map(e => e.Commands);
 

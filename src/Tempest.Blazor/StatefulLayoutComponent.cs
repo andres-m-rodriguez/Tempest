@@ -36,6 +36,13 @@ public abstract class StatefulLayoutComponent : LayoutComponentBase, ITempestCom
             StateHasChanged();
         });
 
+
+    /// <summary>The blessed mutate-and-notify primitive: marshals through InvokeAsync,
+    /// runs a batch of property writes, re-renders once.</summary>
+    protected Task Mutate(Action mutation) => DispatchEvent(mutation);
+
+    /// <summary>Async form of <see cref="Mutate(Action)"/>.</summary>
+    protected Task Mutate(Func<Task> mutation) => DispatchEvent(mutation);
     void ITempestComponent.Rerender() => _ = InvokeAsync(StateHasChanged);
 
     void ITempestComponent.DispatchReaction(Func<Task> reaction)

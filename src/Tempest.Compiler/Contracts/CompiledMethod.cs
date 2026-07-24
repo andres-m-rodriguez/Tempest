@@ -10,6 +10,8 @@ public sealed record CompiledMethod(
     string MethodName,
     bool IsCommand,
     bool IsEvent,
+    /// <summary>True when the generated registration runs this command on host load.</summary>
+    bool RunOnLoad,
     ReturnKind Kind,
     /// <summary>The T of Task&lt;T&gt;/ValueTask&lt;T&gt;, or the sync return type; null when the
     /// method returns nothing.</summary>
@@ -20,5 +22,7 @@ public sealed record CompiledMethod(
     /// <summary>The single parameter's type as written (an [Event] handler's record), if any.</summary>
     string? ParamType,
     string? ParamTypeName,
+    /// <summary>The [CanExecute] member gating this command, when one resolved.</summary>
+    CompiledCanExecute? CanExecute,
     /// <summary>Of the method — the generated state property matches it.</summary>
     string Accessibility);

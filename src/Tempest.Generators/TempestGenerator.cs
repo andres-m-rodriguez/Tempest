@@ -202,6 +202,7 @@ public sealed class TempestGenerator : IIncrementalGenerator
             .Concat(document.Events.Select(m => m.ComponentName))
             .Concat(document.Reactives.Select(r => r.ComponentName))
             .Concat(document.Hooks.Select(h => h.ComponentName))
+            .Concat(document.CanExecutes.Select(c => c.ComponentName))
             .Distinct(StringComparer.Ordinal);
 
     private static Diagnostic ToRoslyn(

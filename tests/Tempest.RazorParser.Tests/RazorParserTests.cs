@@ -181,6 +181,35 @@ public class RazorParserTests
     }
 
     [Fact]
+    public void CanExecuteMembersAreCollectedUnresolved()
+    {
+        var text = """
+            @code {
+                [Command] private void Next() { }
+                [CanExecute] public bool CanNext { get; private set; }
+                [CanExecute(nameof(Next))] private bool HasSession() => true;
+                [CanExecute] public int NotABool { get; set; }
+            }
+            """;
+        var result = ParseAll("A", text);
+
+        Assert.Equal(3, result.CanExecutes.Count);
+
+        var property = Assert.Single(result.CanExecutes, c => c.MemberName == "CanNext");
+        Assert.Null(property.ExplicitTarget);
+        Assert.True(property.ReturnsBool);
+        Assert.False(property.IsMethod);
+
+        var method = Assert.Single(result.CanExecutes, c => c.MemberName == "HasSession");
+        Assert.Equal("Next", method.ExplicitTarget);
+        Assert.True(method.ReturnsBool);
+        Assert.True(method.IsMethod);
+        Assert.Equal(0, method.ParameterCount);
+
+        Assert.False(Assert.Single(result.CanExecutes, c => c.MemberName == "NotABool").ReturnsBool);
+    }
+
+    [Fact]
     public void UnattributedOnMethodIsNotAHook()
     {
         var text = """
@@ -222,7 +251,8 @@ public class RazorParserTests
             new RazorParser().ParseCommands(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
             new RazorParser().ParseEvents(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
             new RazorParser().ParseReactiveProperties(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
-            new RazorParser().ParseHooks(new RazorSource("Cart", Cart, "Demo.Pages")).Value));
+            new RazorParser().ParseHooks(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
+            new RazorParser().ParseCanExecutes(new RazorSource("Cart", Cart, "Demo.Pages")).Value));
     }
 
     [Fact]

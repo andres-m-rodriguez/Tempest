@@ -11,9 +11,10 @@ public class TempestCompilerTests
     private static SourceMethod Method(
         string name = "Go", bool isCommand = true, bool isEvent = false,
         int parameterCount = 0, bool nestedRecord = false, bool hasCt = false,
-        HostKind host = HostKind.Component, string ns = "App", string component = "C",
+        bool runOnLoad = false, HostKind host = HostKind.Component,
+        string ns = "App", string component = "C",
         bool needsUsings = false, string fileUsings = "")
-        => new(ns, component, name, isCommand, isEvent, ReturnKind.Void, null, hasCt,
+        => new(ns, component, name, isCommand, isEvent, runOnLoad, ReturnKind.Void, null, hasCt,
             parameterCount, nestedRecord ? "C.E" : null, nestedRecord ? "E" : null,
             nestedRecord, host, "private", needsUsings, fileUsings, SourceSpan.None);
 
@@ -30,18 +31,24 @@ public class TempestCompilerTests
         => new(ns, component, method, target, returnsTask, "value", parameterCount,
             "private", SourceSpan.None);
 
+    private static SourceCanExecute Gate(
+        string member = "OnGoCanExecute", string? target = null, bool returnsBool = true,
+        bool isMethod = false, int parameterCount = 0, string ns = "App", string component = "C")
+        => new(ns, component, member, target, returnsBool, isMethod, parameterCount, SourceSpan.None);
+
     /// <summary>Builds the document the way a frontend does: a combined
     /// [Event, Command] method lands in both arrays.</summary>
     private static TempestDocument Document(
         SourceMethod[]? methods = null, SourceReactiveProperty[]? reactives = null,
-        SourceHook[]? hooks = null)
+        SourceHook[]? hooks = null, SourceCanExecute[]? canExecutes = null)
     {
         var all = methods ?? [];
         return new TempestDocument(
             new EquatableArray<SourceMethod>(all.Where(m => m.IsCommand).ToArray()),
             new EquatableArray<SourceMethod>(all.Where(m => m.IsEvent).ToArray()),
             new EquatableArray<SourceReactiveProperty>(reactives ?? []),
-            new EquatableArray<SourceHook>(hooks ?? []));
+            new EquatableArray<SourceHook>(hooks ?? []),
+            new EquatableArray<SourceCanExecute>(canExecutes ?? []));
     }
 
     private static TempestCompilation Compile(params TempestDocument[] documents)
@@ -193,6 +200,101 @@ public class TempestCompilerTests
         Assert.Equal("TEM010", diagnostic.Id);
         Assert.Equal(TempestDiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Equal("OnXChanged", Assert.Single(Assert.Single(compilation.Components).Reactives).Hook?.MethodName);
+    }
+
+    [Fact]
+    public void RunOnLoadFlagCarriesThrough()
+    {
+        var compilation = Compile(Document(methods: [Method(runOnLoad: true)]));
+
+        Assert.True(Assert.Single(Assert.Single(compilation.Components).Methods).RunOnLoad);
+    }
+
+    [Fact]
+    public void RunOnLoadOnAnEventCommandIsAnError()
+    {
+        var combined = Method(name: "OnE", isCommand: true, isEvent: true,
+            parameterCount: 1, nestedRecord: true, runOnLoad: true);
+        var compilation = Compile(Document(methods: [combined]));
+
+        Assert.Equal("TEM014", Assert.Single(compilation.Diagnostics).Id);
+        Assert.Empty(compilation.Components);
+    }
+
+    [Fact]
+    public void ConventionGateWiresToItsCommand()
+    {
+        var compilation = Compile(Document(methods: [Method()], canExecutes: [Gate("OnGoCanExecute")]));
+
+        Assert.Empty(compilation.Diagnostics);
+        var gate = Assert.Single(Assert.Single(compilation.Components).Methods).CanExecute;
+        Assert.NotNull(gate);
+        Assert.Equal("OnGoCanExecute", gate.MemberName);
+        Assert.False(gate.IsMethod);
+    }
+
+    [Fact]
+    public void CanPrefixedNameAloneIsNotTheConvention()
+    {
+        var compilation = Compile(Document(methods: [Method()], canExecutes: [Gate("CanGo")]));
+
+        Assert.Equal("TEM011", Assert.Single(compilation.Diagnostics).Id);
+    }
+
+    [Fact]
+    public void ExplicitGateTargetMatchesCommandName()
+    {
+        var compilation = Compile(Document(
+            methods: [Method()],
+            canExecutes: [Gate("HasSession", target: "Go", isMethod: true)]));
+
+        Assert.Empty(compilation.Diagnostics);
+        var gate = Assert.Single(Assert.Single(compilation.Components).Methods).CanExecute;
+        Assert.Equal("HasSession", gate?.MemberName);
+        Assert.True(gate?.IsMethod);
+    }
+
+    [Fact]
+    public void UnmatchedGateIsAnError()
+    {
+        var compilation = Compile(Document(methods: [Method()], canExecutes: [Gate("CanNope")]));
+
+        Assert.Equal("TEM011", Assert.Single(compilation.Diagnostics).Id);
+        Assert.Null(Assert.Single(Assert.Single(compilation.Components).Methods).CanExecute);
+    }
+
+    [Fact]
+    public void MisshapenGateIsAnError()
+    {
+        var notBool = Compile(Document(methods: [Method()], canExecutes: [Gate(returnsBool: false)]));
+        var hasParams = Compile(Document(methods: [Method()], canExecutes: [Gate(isMethod: true, parameterCount: 1)]));
+
+        Assert.Equal("TEM013", Assert.Single(notBool.Diagnostics).Id);
+        Assert.Equal("TEM013", Assert.Single(hasParams.Diagnostics).Id);
+    }
+
+    [Fact]
+    public void DuplicateGateWarnsAndFirstWins()
+    {
+        var compilation = Compile(Document(
+            methods: [Method()],
+            canExecutes: [Gate("OnGoCanExecute"), Gate("AlsoGates", target: "Go")]));
+
+        var diagnostic = Assert.Single(compilation.Diagnostics);
+        Assert.Equal("TEM012", diagnostic.Id);
+        Assert.Equal(TempestDiagnosticSeverity.Warning, diagnostic.Severity);
+        Assert.Equal("OnGoCanExecute", Assert.Single(Assert.Single(compilation.Components).Methods).CanExecute?.MemberName);
+    }
+
+    [Fact]
+    public void GateAndCommandWireAcrossDocuments()
+    {
+        var compilation = Compile(
+            Document(methods: [Method()]),
+            Document(canExecutes: [Gate("OnGoCanExecute")]));
+
+        Assert.Empty(compilation.Diagnostics);
+        Assert.NotNull(Assert.Single(Assert.Single(compilation.Components).Methods).CanExecute);
     }
 
     [Fact]

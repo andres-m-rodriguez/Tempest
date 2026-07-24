@@ -22,6 +22,9 @@ public sealed class CSharpParser : IComponentParser<INamedTypeSymbol>
     public Result<EquatableArray<SourceHook>> ParseHooks(INamedTypeSymbol source)
         => _reader.Read(source).Map(d => d.Hooks);
 
+    public Result<EquatableArray<SourceCanExecute>> ParseCanExecutes(INamedTypeSymbol source)
+        => _reader.Read(source).Map(d => d.CanExecutes);
+
     public Result<EquatableArray<SourceMethod>> ParseCommands(INamedTypeSymbol source)
         => _reader.Read(source).Map(d => d.Commands);
 

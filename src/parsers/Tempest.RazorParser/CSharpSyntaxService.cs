@@ -95,6 +95,13 @@ internal sealed class CSharpSyntaxService
     internal bool HasAttribute(SyntaxList<AttributeListSyntax> lists, string shortName)
         => lists.SelectMany(l => l.Attributes).Any(a => SimpleAttributeName(a.Name.ToString()) == shortName);
 
+    internal AttributeSyntax? FindAttribute(SyntaxList<AttributeListSyntax> lists, string shortName)
+        => lists.SelectMany(l => l.Attributes).FirstOrDefault(a => SimpleAttributeName(a.Name.ToString()) == shortName);
+
+    /// <summary>Textual bool check for a frontend that cannot resolve symbols.</summary>
+    internal bool IsBool(string type)
+        => type is "bool" or "Boolean" or "System.Boolean" or "global::System.Boolean";
+
     /// <summary>Qualified attribute names classify by simple name, with or without the
     /// conventional Attribute suffix.</summary>
     internal string SimpleAttributeName(string name)

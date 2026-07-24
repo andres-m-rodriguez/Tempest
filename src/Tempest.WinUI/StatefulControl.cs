@@ -14,6 +14,7 @@ namespace Tempest;
 public abstract class StatefulControl : UserControl, ITempestComponent, INotifyPropertyChanged
 {
     private readonly List<IDisposable> _subscriptions = [];
+    private readonly List<CommandStateBase> _commands = [];
     private IEventBus? _bus;
 
     protected StatefulControl()
@@ -57,6 +58,13 @@ public abstract class StatefulControl : UserControl, ITempestComponent, INotifyP
             NotifyStateChanged();
         });
 
+
+    /// <summary>The blessed mutate-and-notify primitive: marshals to the dispatcher,
+    /// runs a batch of property writes, broadcasts once.</summary>
+    protected Task Mutate(Action mutation) => DispatchEvent(mutation);
+
+    /// <summary>Async form of <see cref="Mutate(Action)"/>.</summary>
+    protected Task Mutate(Func<Task> mutation) => DispatchEvent(mutation);
     /// <summary>Runs work on the control's dispatcher queue — the WinUI counterpart of
     /// ComponentBase.InvokeAsync, one of the four members the generated twin calls.</summary>
     protected Task InvokeAsync(Func<Task> work)
@@ -78,6 +86,8 @@ public abstract class StatefulControl : UserControl, ITempestComponent, INotifyP
             completion.SetException(new InvalidOperationException("The dispatcher queue is shut down."));
         return completion.Task;
     }
+
+    void ITempestComponent.RegisterCommand(CommandStateBase command) => _commands.Add(command);
 
     void ITempestComponent.Rerender()
         => DispatcherQueue.TryEnqueue(NotifyStateChanged);
@@ -112,5 +122,11 @@ public abstract class StatefulControl : UserControl, ITempestComponent, INotifyP
     }
 
     private void NotifyStateChanged()
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+
+        // State changed, so [CanExecute] members may have too — bound controls re-gate.
+        foreach (var command in _commands)
+            command.RaiseCanExecuteChanged();
+    }
 }

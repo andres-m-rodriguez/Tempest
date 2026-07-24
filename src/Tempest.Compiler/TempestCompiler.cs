@@ -13,6 +13,7 @@ public sealed class TempestCompiler
     private readonly ComponentGroupingService _grouping = new();
     private readonly ShapeRuleService _rules = new();
     private readonly HookResolutionService _hooks = new();
+    private readonly CanExecuteResolutionService _canExecutes = new();
     private readonly UsingsService _usings = new();
 
     /// <param name="documents">The parsed document of every source.</param>
@@ -93,6 +94,29 @@ public sealed class TempestCompiler
                     wired.Add(target.FieldName, hook);
             }
 
+            // Gates resolve against the surviving commands, even for components that
+            // end up suppressed — an unresolvable gate deserves its diagnostic.
+            var gates = new Dictionary<string, SourceCanExecute>(StringComparer.Ordinal);
+            foreach (var gate in bucket.CanExecutes)
+            {
+                if (_rules.JudgeCanExecute(gate) is { } diagnostic)
+                {
+                    diagnostics.Add(diagnostic);
+                    continue;
+                }
+
+                if (_canExecutes.Resolve(gate, methods) is not { } target)
+                {
+                    diagnostics.Add(_rules.UnmatchedCanExecute(gate));
+                    continue;
+                }
+
+                if (gates.ContainsKey(target.MethodName))
+                    diagnostics.Add(_rules.DuplicateCanExecute(gate, target.MethodName));
+                else
+                    gates.Add(target.MethodName, gate);
+            }
+
             if (!hosted || (methods.Count == 0 && reactives.Count == 0))
                 continue;
 
@@ -100,7 +124,8 @@ public sealed class TempestCompiler
                 Namespace: bucket.Namespace,
                 Name: bucket.Name,
                 Host: host,
-                Methods: new EquatableArray<CompiledMethod>(methods.Select(m => ToCompiled(m, host)).ToArray()),
+                Methods: new EquatableArray<CompiledMethod>(
+                    methods.Select(m => ToCompiled(m, gates, host)).ToArray()),
                 Reactives: new EquatableArray<CompiledReactive>(
                     reactives.Select(r => ToCompiled(r, wired, host)).ToArray()),
                 Usings: _usings.Collect(ambient, methods, reactives)));
@@ -111,15 +136,20 @@ public sealed class TempestCompiler
             new EquatableArray<TempestDiagnostic>(diagnostics.ToArray())));
     }
 
-    private static CompiledMethod ToCompiled(SourceMethod method, HostKind host) => new(
+    private static CompiledMethod ToCompiled(
+        SourceMethod method, IReadOnlyDictionary<string, SourceCanExecute> gates, HostKind host) => new(
         MethodName: method.MethodName,
         IsCommand: method.IsCommand,
         IsEvent: method.IsEvent,
+        RunOnLoad: method.RunOnLoad,
         Kind: method.Kind,
         ResultType: method.ResultType,
         HasCancellationToken: method.HasCancellationToken,
         ParamType: method.ParamType,
         ParamTypeName: method.ParamTypeName,
+        CanExecute: gates.TryGetValue(method.MethodName, out var gate)
+            ? new CompiledCanExecute(gate.MemberName, gate.IsMethod)
+            : null,
         Accessibility: StateAccessibility(host, method.Accessibility));
 
     private static CompiledReactive ToCompiled(

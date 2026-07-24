@@ -56,12 +56,20 @@ public sealed partial class TodoStore(ITodoApi api, IEventBus bus) : StatefulSto
 
 - Parameterless, or a single trailing `CancellationToken` for latest-wins cancellation (TEM003).
 - Generates `{Name}State`: `IsLoading`, `Error`, `Execute()`, `TryExecute()`.
+- States implement `ICommand` (Execute → `TryExecute`, CanExecute gates on `IsLoading`, CanExecuteChanged on both loading edges), so XAML `Command="{x:Bind SaveState}"` bindings take them directly; an `[Event, Command]` state takes its record via `CommandParameter`.
+- `[Command, RunOnLoad]` runs the command when the host initializes (Blazor `OnInitialized`, XAML `Loaded`, a store's construction) through `TryExecute` — a failing load lands in `{Name}State.Error`. Not valid on an `[Event, Command]` (TEM014): there is no record to run it with.
 - Return type picks the state: `void`/`Task`/`ValueTask` → `CommandState`; `T`/`Task<T>`/`ValueTask<T>` → `CommandState<T>` with `Result`/`HasResult`.
 
 ## `[Event]` — the outside world reaching in
 
 - Handler takes exactly one parameter: a record **nested in this class** — the record is the contract (TEM001). Anyone publishes it: `Bus.Publish(new TodoStore.TodoCompleted(3))`.
 - `[Event, Command]` combines both: an `EventCommandState<TEvent>` named after the record, bus-triggered through `TryExecute` so a publish never throws in the publisher; may add the trailing token.
+
+## `[CanExecute]` — gating a command
+
+- A bool property or parameterless bool method (TEM013); the generated state reads it as its `ICommand.CanExecute` predicate, so bound XAML controls enable and disable themselves.
+- Bare `[CanExecute]` resolves by name: `On{Command}CanExecute` (`OnNextCanExecute` → `Next`) — the same grammar as `[OnChanged]`. `[CanExecute(nameof(Next))]` targets explicitly (the command's method name) and frees the member name.
+- Unresolvable gate: TEM011. Two gates on one command: first wins, TEM012.
 
 ## `[OnChanged]` — reacting to a reactive
 
@@ -102,9 +110,14 @@ partial class TodoStore
 | TEM008 | error | `[OnChanged]` matches no `[Reactive]` field |
 | TEM009 | error | `[OnChanged]` must take exactly one parameter |
 | TEM010 | warning | field already has a hook; duplicate ignored |
+| TEM011 | error | `[CanExecute]` matches no `[Command]` |
+| TEM012 | warning | command already has a gate; duplicate ignored |
+| TEM013 | error | `[CanExecute]` must be a bool property or parameterless bool method |
+| TEM014 | error | `[RunOnLoad]` cannot run an `[Event, Command]` |
 
 ## Open questions
 
 - ~~**State accessibility**~~ *(resolved)*: the state property mirrors its member's accessibility for Blazor components (markup compiles into the class, so private is reachable), and is forced `public` for `StatefulControl` and `StatefulStore` hosts — WPF's binding engine reads only public properties, and a store's whole point is being consumed from outside. Host policy lives in the compiler; the emitter stays neutral.
 - **Host contract**: the four-member surface is a convention between emitter and bases; consider making it a real interface/abstract base in Core.
 - **Namespaces**: `Tempest.*` assemblies currently share the root `Tempest` namespace; revisit before a third host ships.
+- **Later: `Tempest.WinUI.DependencyInjection`** — container wiring for WinUI (bus from `IServiceProvider`, store registration helpers); today the one-liner `TempestWinUI.Bus = services.GetRequiredService<IEventBus>()` covers it.

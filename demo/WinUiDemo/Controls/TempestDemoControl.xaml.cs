@@ -19,7 +19,6 @@ public partial class TempestDemoControl : StatefulControl
     public string SavedAtText { get; private set; } = "Not saved yet";
     public string DirtyText => NameState.IsDirty ? "Dirty" : "Pristine";
     public string SaveLabel => SaveState.IsLoading ? "Saving…" : "Save";
-    public bool SaveEnabled => !SaveState.IsLoading;
 
     [OnChanged]
     private void OnNameChanged(string value)
@@ -33,7 +32,6 @@ public partial class TempestDemoControl : StatefulControl
     }
 
     public sealed record CounterBumped(int By);
-
     [Event]
     private void OnCounterBumped(CounterBumped e)
         => CountState.Value += e.By;
@@ -44,6 +42,4 @@ public partial class TempestDemoControl : StatefulControl
     private void IncrementClicked(object sender, RoutedEventArgs e) => CountState.Value++;
 
     private void ResetClicked(object sender, RoutedEventArgs e) => CountState.Reset();
-
-    private async void SaveClicked(object sender, RoutedEventArgs e) => await SaveState.TryExecute();
 }
