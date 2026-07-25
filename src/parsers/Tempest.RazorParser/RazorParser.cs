@@ -34,6 +34,9 @@ public sealed class RazorParser : IComponentParser<RazorSource>
     public Result<EquatableArray<SourceMethod>> ParseEvents(RazorSource source)
         => Entries(source).Map(e => e.Events);
 
+    public Result<EquatableArray<SourceInjection>> ParseInjections(RazorSource source)
+        => Entries(source).Map(e => e.Injections);
+
     private Result<TempestDocument> Entries(RazorSource? source)
     {
         if (_cache.TryGet(source, out var cached))

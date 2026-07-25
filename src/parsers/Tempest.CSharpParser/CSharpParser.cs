@@ -30,4 +30,7 @@ public sealed class CSharpParser : IComponentParser<INamedTypeSymbol>
 
     public Result<EquatableArray<SourceMethod>> ParseEvents(INamedTypeSymbol source)
         => _reader.Read(source).Map(d => d.Events);
+
+    public Result<EquatableArray<SourceInjection>> ParseInjections(INamedTypeSymbol source)
+        => _reader.Read(source).Map(d => d.Injections);
 }

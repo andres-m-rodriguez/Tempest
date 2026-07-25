@@ -11,4 +11,5 @@ internal sealed record ComponentBucket(
     IReadOnlyList<SourceMethod> Methods,
     IReadOnlyList<SourceReactiveProperty> Reactives,
     IReadOnlyList<SourceHook> Hooks,
-    IReadOnlyList<SourceCanExecute> CanExecutes);
+    IReadOnlyList<SourceCanExecute> CanExecutes,
+    SourceInjection? Injection);

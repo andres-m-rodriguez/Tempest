@@ -128,6 +128,12 @@ public sealed class TempestCompiler
                     methods.Select(m => ToCompiled(m, gates, host)).ToArray()),
                 Reactives: new EquatableArray<CompiledReactive>(
                     reactives.Select(r => ToCompiled(r, wired, host)).ToArray()),
+                // Host policy: only XAML activation needs the parameterless bridge.
+                // Razor injects through @inject; a store is constructed by the
+                // container, whose own constructor injection already works.
+                Injection: host is HostKind.Control && bucket.Injection is { } injection
+                    ? new CompiledInjection(injection.ParameterTypes)
+                    : null,
                 Usings: _usings.Collect(ambient, methods, reactives)));
         }
 

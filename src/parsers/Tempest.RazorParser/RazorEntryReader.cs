@@ -235,6 +235,9 @@ internal sealed class RazorEntryReader
             Events: new EquatableArray<SourceMethod>(methods.Where(m => m.IsEvent).ToArray()),
             Reactives: new EquatableArray<SourceReactiveProperty>(reactives.ToArray()),
             Hooks: new EquatableArray<SourceHook>(hooks.ToArray()),
-            CanExecutes: new EquatableArray<SourceCanExecute>(canExecutes.ToArray()));
+            CanExecutes: new EquatableArray<SourceCanExecute>(canExecutes.ToArray()),
+            // Razor components inject through @inject; the text frontend never sees a
+            // constructor.
+            Injections: EquatableArray<SourceInjection>.Empty);
     }
 }

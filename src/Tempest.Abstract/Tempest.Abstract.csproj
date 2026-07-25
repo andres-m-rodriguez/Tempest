@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Tempest</RootNamespace>
     <PackageId>Tempest.Abstract</PackageId>
-    <Version>1.0.0-beta.6</Version>
+    <Version>1.0.0-beta.7</Version>
     <Description>Platform-neutral core for Tempest: the [Command]/[Reactive]/[Event]/[OnChanged] attributes, the event bus, the CommandState/ReactiveState families, the headless StatefulStore host — and the source generator that emits the state twins. UI hosts (Tempest.Blazor, Tempest.Wpf, Tempest.WinUI) build on this.</Description>
     <Authors>andresitomanuel</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

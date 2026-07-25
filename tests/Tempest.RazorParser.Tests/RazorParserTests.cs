@@ -252,7 +252,8 @@ public class RazorParserTests
             new RazorParser().ParseEvents(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
             new RazorParser().ParseReactiveProperties(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
             new RazorParser().ParseHooks(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
-            new RazorParser().ParseCanExecutes(new RazorSource("Cart", Cart, "Demo.Pages")).Value));
+            new RazorParser().ParseCanExecutes(new RazorSource("Cart", Cart, "Demo.Pages")).Value,
+            new RazorParser().ParseInjections(new RazorSource("Cart", Cart, "Demo.Pages")).Value));
     }
 
     [Fact]
@@ -351,6 +352,7 @@ public class RazorParserTests
     [InlineData("StatefulComponent", HostKind.Component)]
     [InlineData("Tempest.StatefulLayoutComponent", HostKind.LayoutComponent)]
     [InlineData("StatefulControl", HostKind.Control)]
+    [InlineData("Tempest.StatefulPage", HostKind.Control)]
     [InlineData("Tempest.StatefulStore", HostKind.Store)]
     [InlineData("SomeOtherBase", HostKind.None)]
     [InlineData("My.Custom.PageBase", HostKind.None)]

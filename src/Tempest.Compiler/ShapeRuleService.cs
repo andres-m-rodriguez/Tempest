@@ -12,7 +12,7 @@ internal sealed class ShapeRuleService
     internal TempestDiagnostic MissingHost(string component, SourceSpan span) => new(
         Id: "TEM002",
         Title: "Component must inherit a Tempest host base",
-        Message: $"'{component}' uses [Command], [Event] or [Reactive] but inherits no Tempest host base (StatefulComponent, StatefulLayoutComponent, StatefulControl, or StatefulStore)",
+        Message: $"'{component}' uses [Command], [Event] or [Reactive] but inherits no Tempest host base (StatefulComponent, StatefulLayoutComponent, StatefulControl, StatefulPage, or StatefulStore)",
         ComponentName: component,
         Severity: TempestDiagnosticSeverity.Error,
         Span: span);

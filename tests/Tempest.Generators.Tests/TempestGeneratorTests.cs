@@ -171,6 +171,38 @@ public class TempestGeneratorTests
     }
 
     [Fact]
+    public void PrimaryConstructorEmitsInjectionBridgeForXamlPage()
+    {
+        var result = Run(files: [], sources:
+        [
+            // Tempest.WinUI targets Windows, so the host base is stubbed by name —
+            // host resolution matches simple names.
+            ("Stubs.cs", "namespace Tempest { public abstract class StatefulPage { } }"),
+            ("Pages/GuildPage.cs", """
+                using System.Threading;
+                using System.Threading.Tasks;
+                using Tempest;
+
+                namespace Demo.Pages;
+
+                public interface IGuildsClient { }
+
+                public sealed partial class GuildPage(IGuildsClient client) : StatefulPage
+                {
+                    [Command]
+                    private Task Load(CancellationToken ct) => Task.CompletedTask;
+                }
+                """),
+        ]);
+
+        Assert.Empty(result.Diagnostics);
+        var source = Assert.Single(Assert.Single(result.Results).GeneratedSources).SourceText.ToString();
+        Assert.Contains("public GuildPage()", source);
+        Assert.Contains("global::Tempest.TempestServices.Resolve<global::Demo.Pages.IGuildsClient>()", source);
+        Assert.Contains("InitializeComponent();", source);
+    }
+
+    [Fact]
     public void HookInCodeBehindWiresToRazorFieldAcrossFrontends()
     {
         var result = Run(

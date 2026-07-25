@@ -59,6 +59,7 @@ internal sealed class SymbolFactsService
                 "StatefulComponent" => HostKind.Component,
                 "StatefulLayoutComponent" => HostKind.LayoutComponent,
                 "StatefulControl" => HostKind.Control,
+                "StatefulPage" => HostKind.Control,
                 "StatefulStore" => HostKind.Store,
                 _ => HostKind.None,
             };

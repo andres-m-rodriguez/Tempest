@@ -1,0 +1,19 @@
+<tempest:StatefulControl x:Class="WinUiDemo.Controls.Counter"
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:tempest="using:Tempest">
+    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12">
+        <StackPanel Spacing="8">
+            <TextBlock Text="Counter — driven entirely by [Event]s"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding CountState.Value}"
+                       FontSize="28"/>
+            <TextBlock Text="{Binding LastChangeText}"
+                       Opacity="0.6"
+                       FontSize="12"/>
+        </StackPanel>
+    </Border>
+</tempest:StatefulControl>

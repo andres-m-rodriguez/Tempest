@@ -15,6 +15,10 @@ public sealed record CompiledComponent(
     HostKind Host,
     EquatableArray<CompiledMethod> Methods,
     EquatableArray<CompiledReactive> Reactives,
+    /// <summary>The constructor-injection bridge to emit, when the component's only
+    /// explicit constructor takes parameters and the host is a XAML one — null
+    /// otherwise (host policy lives here, the emitter stays neutral).</summary>
+    CompiledInjection? Injection,
     /// <summary>Using directives the generated file needs so razor-sourced type names
     /// (carried as written) resolve: the source files' own plus every ambient import.
     /// Empty when every member resolved symbols itself.</summary>

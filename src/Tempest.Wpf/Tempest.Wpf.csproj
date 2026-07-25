@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Tempest</RootNamespace>
     <PackageId>Tempest.Wpf</PackageId>
-    <Version>1.0.0-beta.6</Version>
+    <Version>1.0.0-beta.7</Version>
     <Description>Component-owned state for WPF: the StatefulControl host base on top of Tempest.Abstract. Same attributes, same generated twin — re-rendering maps to an INotifyPropertyChanged broadcast.</Description>
     <Authors>andresitomanuel</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

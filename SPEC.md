@@ -44,6 +44,9 @@ public sealed partial class TodoStore(ITodoApi api, IEventBus bus) : StatefulSto
 - Must be `partial` (the generated twin is the other half) and inherit a host base — TEM002 otherwise:
   - `StatefulComponent` / `StatefulLayoutComponent` — Blazor (also implicit for `.razor` files)
   - `StatefulControl` — XAML (Tempest.Wpf and Tempest.WinUI hosts)
+  - `StatefulPage` — XAML page for Frame navigation (Tempest.WinUI; same host policy as `StatefulControl`)
+
+  XAML hosts support **constructor injection**: when a component's only explicit constructor takes parameters (a primary constructor, typically) and declares no parameterless one, the generator emits a parameterless bridge that resolves each parameter from `TempestServices.Provider` (set via the host's `UseServices`) and chains — then calls `InitializeComponent()`, whose `_contentLoaded` guard keeps a classic constructor that already calls it correct. Razor components keep `@inject`; stores are constructed by the container itself — host policy in the compiler.
   - `StatefulStore` — headless, constructor-DI, shared by any UI (Tempest.Abstract)
 - Constructor injection is ordinary C#; `StatefulStore` takes the `IEventBus` it registers against.
 
@@ -120,4 +123,4 @@ partial class TodoStore
 - ~~**State accessibility**~~ *(resolved)*: the state property mirrors its member's accessibility for Blazor components (markup compiles into the class, so private is reachable), and is forced `public` for `StatefulControl` and `StatefulStore` hosts — WPF's binding engine reads only public properties, and a store's whole point is being consumed from outside. Host policy lives in the compiler; the emitter stays neutral.
 - **Host contract**: the four-member surface is a convention between emitter and bases; consider making it a real interface/abstract base in Core.
 - **Namespaces**: `Tempest.*` assemblies currently share the root `Tempest` namespace; revisit before a third host ships.
-- **Later: `Tempest.WinUI.DependencyInjection`** — container wiring for WinUI (bus from `IServiceProvider`, store registration helpers); today the one-liner `TempestWinUI.Bus = services.GetRequiredService<IEventBus>()` covers it.
+- **Later: `Tempest.WinUI.DependencyInjection`** — container wiring for WinUI (store registration helpers, scoped lifetimes); today `TempestWinUI.UseServices(provider)` covers the basics — it exposes the container as `Services` on `StatefulPage`/`StatefulControl` and adopts a registered `IEventBus` as the ambient bus.

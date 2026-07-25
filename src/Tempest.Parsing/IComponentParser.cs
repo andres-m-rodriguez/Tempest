@@ -49,4 +49,12 @@ public interface IComponentParser<in TSource>
     /// compiler groups by identity.
     /// </summary>
     Result<EquatableArray<SourceMethod>> ParseEvents(TSource source);
+
+    /// <summary>
+    /// The component's constructor-injection request, when its only explicit
+    /// constructor takes parameters — empty for frontends whose components can't
+    /// declare one (.razor uses @inject). Whether it's honored is the compiler's
+    /// host policy.
+    /// </summary>
+    Result<EquatableArray<SourceInjection>> ParseInjections(TSource source);
 }

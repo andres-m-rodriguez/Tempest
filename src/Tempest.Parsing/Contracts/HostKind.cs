@@ -14,7 +14,7 @@ public enum HostKind
     Component,
     /// <summary>StatefulLayoutComponent — Blazor layouts.</summary>
     LayoutComponent,
-    /// <summary>StatefulControl — XAML.</summary>
+    /// <summary>StatefulControl or StatefulPage — XAML.</summary>
     Control,
     /// <summary>StatefulStore — headless, shared by any UI.</summary>
     Store,

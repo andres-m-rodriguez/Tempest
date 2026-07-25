@@ -1,0 +1,21 @@
+<tempest:StatefulPage x:Class="WinUiDemo.Pages.QuoteDetailPage"
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:tempest="using:Tempest">
+    <StackPanel Margin="24" Spacing="12" MaxWidth="520">
+        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Navigation parameter → [Reactive] state → [RunOnLoad]"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding QuoteState.Value}"
+                           TextWrapping="Wrap"
+                           FontStyle="Italic"/>
+                <TextBlock Text="{Binding AnalysisText}"
+                           Opacity="0.6"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</tempest:StatefulPage>

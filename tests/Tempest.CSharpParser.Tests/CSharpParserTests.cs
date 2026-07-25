@@ -29,6 +29,7 @@ public class CSharpParserTests
             }
             public abstract class StatefulComponent { }
             public abstract class StatefulControl { }
+            public abstract class StatefulPage { }
             public abstract class StatefulStore { }
         }
         """;
@@ -205,6 +206,64 @@ public class CSharpParserTests
             }
             """);
         Assert.Equal(HostKind.None, Assert.Single(none.Commands).Host);
+    }
+
+    [Fact]
+    public void PrimaryConstructorBecomesInjection()
+    {
+        var document = Parse("""
+            namespace App;
+            public interface IThing { }
+            public sealed partial class C(IThing thing, string name) : Tempest.StatefulPage
+            {
+                [Tempest.Command] private void Go() { }
+            }
+            """);
+
+        var injection = Assert.Single(document.Injections);
+        Assert.Equal(HostKind.Control, injection.Host);
+        Assert.Equal(
+            ["global::App.IThing", "string"],
+            injection.ParameterTypes.ToArray());
+    }
+
+    [Fact]
+    public void ExplicitParameterlessOrAmbiguousConstructorsProduceNoInjection()
+    {
+        var parameterless = Parse("""
+            namespace App;
+            public sealed partial class C : Tempest.StatefulPage
+            {
+                public C() { }
+                [Tempest.Command] private void Go() { }
+            }
+            """);
+        Assert.Empty(parameterless.Injections);
+
+        var overloaded = Parse("""
+            namespace App;
+            public interface IThing { }
+            public sealed partial class C : Tempest.StatefulPage
+            {
+                public C(IThing thing) { }
+                public C(IThing thing, int extra) { }
+                [Tempest.Command] private void Go() { }
+            }
+            """);
+        Assert.Empty(overloaded.Injections);
+    }
+
+    [Fact]
+    public void StatefulPageResolvesAsControlHost()
+    {
+        var page = Parse("""
+            namespace App;
+            public sealed partial class C : Tempest.StatefulPage
+            {
+                [Tempest.Command] private void Go() { }
+            }
+            """);
+        Assert.Equal(HostKind.Control, Assert.Single(page.Commands).Host);
     }
 
     [Fact]

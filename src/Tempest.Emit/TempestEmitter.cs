@@ -62,6 +62,9 @@ public sealed class TempestEmitter
 
         var body = indent + "    ";
 
+        if (component.Injection is { } injection)
+            WriteInjectionConstructor(sb, body, component.Name, injection);
+
         foreach (var method in component.Methods)
         {
             if (method.IsCommand)
@@ -78,6 +81,28 @@ public sealed class TempestEmitter
             sb.AppendLine("}");
 
         return sb.ToString();
+    }
+
+    private static void WriteInjectionConstructor(
+        StringBuilder sb, string body, string name, CompiledInjection injection)
+    {
+        // XAML activation (Frame.Navigate, markup) calls the parameterless
+        // constructor; this bridge resolves the user constructor's services from the
+        // ambient provider and chains. InitializeComponent's _contentLoaded guard
+        // makes the call idempotent, so a classic constructor that already calls it
+        // stays correct.
+        sb.AppendLine($"{body}/// <summary>XAML activation bridge: resolves the constructor's services from TempestServices.Provider.</summary>");
+        sb.AppendLine($"{body}public {name}()");
+        sb.AppendLine($"{body}    : this(");
+        for (var i = 0; i < injection.ParameterTypes.Count; i++)
+        {
+            var separator = i < injection.ParameterTypes.Count - 1 ? "," : ")";
+            sb.AppendLine($"{body}        global::Tempest.TempestServices.Resolve<{injection.ParameterTypes[i]}>(){separator}");
+        }
+        sb.AppendLine($"{body}{{");
+        sb.AppendLine($"{body}    InitializeComponent();");
+        sb.AppendLine($"{body}}}");
+        sb.AppendLine();
     }
 
     private static void WriteCommandState(StringBuilder sb, string body, CompiledMethod method)

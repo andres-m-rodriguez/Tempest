@@ -4,28 +4,27 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace Tempest;
 
-/// <summary>Base class for WinUI controls that own their state and expose [Command]
-/// work, [Reactive] values and [Event] doorbells — the same four-member contract
-/// <c>StatefulComponent</c> implements for Blazor, backed by the DispatcherQueue and
-/// INotifyPropertyChanged: a re-render is a PropertyChanged broadcast (empty property
-/// name), which re-evaluates every binding rooted at this control. DataContext
-/// defaults to the control itself, so bindings like {Binding CountState.Value} just
-/// work. Handlers register on Loaded and unregister on Unloaded.</summary>
-public abstract class StatefulControl : UserControl, ITempestComponent, INotifyPropertyChanged
+/// <summary>The page flavor of <see cref="StatefulControl"/>: same [Command],
+/// [Reactive], [Event] and [CanExecute] support, inheriting Page so Frame navigation
+/// accepts it directly — no view-model detour. A mirror of StatefulControl because
+/// C# has no multiple inheritance; change both when changing either. Navigation
+/// parameters arrive through the ordinary OnNavigatedTo override, which fires before
+/// Loaded — state seeded there is visible to a [Command, RunOnLoad].</summary>
+public abstract class StatefulPage : Page, ITempestComponent, INotifyPropertyChanged
 {
     private readonly List<IDisposable> _subscriptions = [];
     private readonly List<CommandStateBase> _commands = [];
     private IEventBus? _bus;
 
-    protected StatefulControl()
+    protected StatefulPage()
     {
         DataContext = this;
         Loaded += (_, _) => Register();
         Unloaded += (_, _) => Unregister();
     }
 
-    /// <summary>The bus this control registers against — the app-wide
-    /// <see cref="TempestWinUI.Bus"/> unless one is assigned before the control loads
+    /// <summary>The bus this page registers against — the app-wide
+    /// <see cref="TempestWinUI.Bus"/> unless one is assigned before the page loads
     /// (XAML has no constructor injection).</summary>
     public IEventBus Bus
     {
@@ -34,8 +33,8 @@ public abstract class StatefulControl : UserControl, ITempestComponent, INotifyP
     }
 
     /// <summary>The app's services, set at startup through
-    /// <see cref="TempestWinUI.UseServices"/> — XAML instantiates controls through
-    /// their parameterless constructor, so resolution replaces constructor injection.</summary>
+    /// <see cref="TempestWinUI.UseServices"/> — Frame instantiates pages through their
+    /// parameterless constructor, so resolution replaces constructor injection.</summary>
     protected IServiceProvider Services
         => TempestWinUI.Services
             ?? throw new InvalidOperationException("No service provider is configured. Call TempestWinUI.UseServices(provider) at startup.");
@@ -65,14 +64,14 @@ public abstract class StatefulControl : UserControl, ITempestComponent, INotifyP
             NotifyStateChanged();
         });
 
-
     /// <summary>The blessed mutate-and-notify primitive: marshals to the dispatcher,
     /// runs a batch of property writes, broadcasts once.</summary>
     protected Task Mutate(Action mutation) => DispatchEvent(mutation);
 
     /// <summary>Async form of <see cref="Mutate(Action)"/>.</summary>
     protected Task Mutate(Func<Task> mutation) => DispatchEvent(mutation);
-    /// <summary>Runs work on the control's dispatcher queue — the WinUI counterpart of
+
+    /// <summary>Runs work on the page's dispatcher queue — the WinUI counterpart of
     /// ComponentBase.InvokeAsync, one of the four members the generated twin calls.</summary>
     protected Task InvokeAsync(Func<Task> work)
     {

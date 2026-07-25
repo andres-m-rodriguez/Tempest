@@ -14,12 +14,14 @@ public sealed record TempestDocument(
     EquatableArray<SourceMethod> Events,
     EquatableArray<SourceReactiveProperty> Reactives,
     EquatableArray<SourceHook> Hooks,
-    EquatableArray<SourceCanExecute> CanExecutes)
+    EquatableArray<SourceCanExecute> CanExecutes,
+    EquatableArray<SourceInjection> Injections)
 {
     public static TempestDocument Empty { get; } = new(
         EquatableArray<SourceMethod>.Empty,
         EquatableArray<SourceMethod>.Empty,
         EquatableArray<SourceReactiveProperty>.Empty,
         EquatableArray<SourceHook>.Empty,
-        EquatableArray<SourceCanExecute>.Empty);
+        EquatableArray<SourceCanExecute>.Empty,
+        EquatableArray<SourceInjection>.Empty);
 }

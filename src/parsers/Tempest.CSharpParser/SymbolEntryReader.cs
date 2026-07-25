@@ -74,7 +74,37 @@ internal sealed class SymbolEntryReader
             Events: new EquatableArray<SourceMethod>(methods.Where(m => m.IsEvent).ToArray()),
             Reactives: new EquatableArray<SourceReactiveProperty>(reactives.ToArray()),
             Hooks: new EquatableArray<SourceHook>(hooks.ToArray()),
-            CanExecutes: new EquatableArray<SourceCanExecute>(canExecutes.ToArray()));
+            CanExecutes: new EquatableArray<SourceCanExecute>(canExecutes.ToArray()),
+            Injections: ReadInjection(component, ns, host) is { } injection
+                ? new EquatableArray<SourceInjection>([injection])
+                : EquatableArray<SourceInjection>.Empty);
+    }
+
+    /// <summary>The injection request: exactly one explicit constructor (primary or
+    /// classic), taking parameters, with no parameterless alternative — anything else
+    /// means the user is handling construction and the emitter must not add one.</summary>
+    private SourceInjection? ReadInjection(INamedTypeSymbol component, string ns, HostKind host)
+    {
+        IMethodSymbol? explicitCtor = null;
+        foreach (var ctor in component.InstanceConstructors)
+        {
+            if (ctor.IsImplicitlyDeclared)
+                continue;
+            if (ctor.Parameters.Length == 0 || explicitCtor is not null)
+                return null;
+            explicitCtor = ctor;
+        }
+
+        if (explicitCtor is null)
+            return null;
+
+        return new SourceInjection(
+            Namespace: ns,
+            ComponentName: component.Name,
+            ParameterTypes: new EquatableArray<string>(
+                explicitCtor.Parameters.Select(p => _facts.Qualified(p.Type)).ToArray()),
+            Host: host,
+            Span: _facts.Span(explicitCtor));
     }
 
     private void ReadMethod(

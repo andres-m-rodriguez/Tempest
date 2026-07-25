@@ -34,10 +34,19 @@ internal sealed class ComponentGroupingService
             .Select(g => g.First())
             .ToList();
 
+        // At most one per component by construction; identity dedup collapses the
+        // copies two frontends produce for one type.
+        var injections = documents
+            .SelectMany(d => d.Injections)
+            .GroupBy(i => (i.Namespace, i.ComponentName))
+            .Select(g => g.First())
+            .ToList();
+
         var methodsByComponent = methods.ToLookup(m => (m.Namespace, m.ComponentName));
         var reactivesByComponent = reactives.ToLookup(r => (r.Namespace, r.ComponentName));
         var hooksByComponent = hooks.ToLookup(h => (h.Namespace, h.ComponentName));
         var canExecutesByComponent = canExecutes.ToLookup(c => (c.Namespace, c.ComponentName));
+        var injectionByComponent = injections.ToDictionary(i => (i.Namespace, i.ComponentName));
 
         // Wiring-only components still get a bucket, so unresolvable hooks and gates
         // get diagnosed.
@@ -49,10 +58,11 @@ internal sealed class ComponentGroupingService
             .Select(key => new ComponentBucket(
                 key.Namespace,
                 key.ComponentName,
-                methodsByComponent[key].ToList(),
-                reactivesByComponent[key].ToList(),
-                hooksByComponent[key].ToList(),
-                canExecutesByComponent[key].ToList()))
+                [.. methodsByComponent[key]],
+                [.. reactivesByComponent[key]],
+                [.. hooksByComponent[key]],
+                [.. canExecutesByComponent[key]],
+                injectionByComponent.TryGetValue(key, out var injection) ? injection : null))
             .ToList();
     }
 }

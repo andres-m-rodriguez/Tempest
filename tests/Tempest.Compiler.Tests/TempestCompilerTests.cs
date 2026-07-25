@@ -36,11 +36,18 @@ public class TempestCompilerTests
         bool isMethod = false, int parameterCount = 0, string ns = "App", string component = "C")
         => new(ns, component, member, target, returnsBool, isMethod, parameterCount, SourceSpan.None);
 
+    private static SourceInjection Injection(
+        string[]? parameterTypes = null, HostKind host = HostKind.Control,
+        string ns = "App", string component = "C")
+        => new(ns, component, new EquatableArray<string>(parameterTypes ?? ["global::App.IThing"]),
+            host, SourceSpan.None);
+
     /// <summary>Builds the document the way a frontend does: a combined
     /// [Event, Command] method lands in both arrays.</summary>
     private static TempestDocument Document(
         SourceMethod[]? methods = null, SourceReactiveProperty[]? reactives = null,
-        SourceHook[]? hooks = null, SourceCanExecute[]? canExecutes = null)
+        SourceHook[]? hooks = null, SourceCanExecute[]? canExecutes = null,
+        SourceInjection[]? injections = null)
     {
         var all = methods ?? [];
         return new TempestDocument(
@@ -48,7 +55,8 @@ public class TempestCompilerTests
             new EquatableArray<SourceMethod>(all.Where(m => m.IsEvent).ToArray()),
             new EquatableArray<SourceReactiveProperty>(reactives ?? []),
             new EquatableArray<SourceHook>(hooks ?? []),
-            new EquatableArray<SourceCanExecute>(canExecutes ?? []));
+            new EquatableArray<SourceCanExecute>(canExecutes ?? []),
+            new EquatableArray<SourceInjection>(injections ?? []));
     }
 
     private static TempestCompilation Compile(params TempestDocument[] documents)
@@ -56,6 +64,22 @@ public class TempestCompilerTests
         var result = Compiler.Compile(documents);
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    [Fact]
+    public void InjectionIsCarriedForXamlHostsOnly()
+    {
+        var control = Compile(Document(
+            methods: [Method(host: HostKind.Control)],
+            injections: [Injection()]));
+        var carried = Assert.Single(control.Components).Injection;
+        Assert.NotNull(carried);
+        Assert.Equal("global::App.IThing", Assert.Single(carried.ParameterTypes));
+
+        var store = Compile(Document(
+            methods: [Method(host: HostKind.Store)],
+            injections: [Injection(host: HostKind.Store)]));
+        Assert.Null(Assert.Single(store.Components).Injection);
     }
 
     [Fact]

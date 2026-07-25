@@ -16,6 +16,7 @@ public class TempestEmitterTests
         string name = "Widget",
         CompiledMethod[]? methods = null,
         CompiledReactive[]? reactives = null,
+        CompiledInjection? injection = null,
         string[]? usings = null)
         => new(
             ns,
@@ -23,6 +24,7 @@ public class TempestEmitterTests
             HostKind.Component,
             new EquatableArray<CompiledMethod>(methods ?? []),
             new EquatableArray<CompiledReactive>(reactives ?? []),
+            injection,
             new EquatableArray<string>(usings ?? []));
 
     private static CompiledMethod Command(
@@ -56,6 +58,20 @@ public class TempestEmitterTests
         Assert.True(errors.Count == 0,
             "Generated source has syntax errors:\n" + string.Join("\n", errors) + "\n\n" + source);
         return source;
+    }
+
+    [Fact]
+    public void InjectionEmitsParameterlessBridgeConstructor()
+    {
+        var source = EmitValid(Component(
+            methods: [Command("Save", ReturnKind.Task)],
+            injection: new CompiledInjection(new EquatableArray<string>(
+                ["global::App.IThing", "global::App.IOther"]))));
+
+        Assert.Contains("public Widget()", source);
+        Assert.Contains("global::Tempest.TempestServices.Resolve<global::App.IThing>(),", source);
+        Assert.Contains("global::Tempest.TempestServices.Resolve<global::App.IOther>())", source);
+        Assert.Contains("InitializeComponent();", source);
     }
 
     [Fact]

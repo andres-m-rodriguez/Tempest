@@ -33,6 +33,13 @@ public abstract class StatefulControl : UserControl, ITempestComponent, INotifyP
         set => _bus = value;
     }
 
+    /// <summary>The app's services, set at startup through
+    /// <see cref="TempestWpf.UseServices"/> — XAML instantiates controls through
+    /// their parameterless constructor, so resolution replaces constructor injection.</summary>
+    protected IServiceProvider Services
+        => TempestWpf.Services
+            ?? throw new InvalidOperationException("No service provider is configured. Call TempestWpf.UseServices(provider) at startup.");
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>Overridden by the source generator to wire up handlers and states.</summary>
